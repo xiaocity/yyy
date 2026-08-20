@@ -1,0 +1,25 @@
+{
+  "description": "羊羊羊之草原牧歌 · 微信小游戏版",
+  "packOptions": {
+    "ignore": [
+      { "type": "file", "value": "test.html" },
+      { "type": "file", "value": "extract_core.py" },
+      { "type": "file", "value": "check_core.py" },
+      { "type": "file", "value": "verify_core.js" }
+    ]
+  },
+  "setting": {
+    "urlCheck": false,
+    "es6": false,
+    "enhance": false,
+    "postcss": false,
+    "minified": false
+  },
+  "compileType": "game",
+  "libVersion": "3.5.0",
+  "appid": "touristappid",
+  "projectname": "yangyangyang-caoyuanmuge",
+  "simulatorType": "wan",
+  "simulatorPluginLibVersion": {},
+  "condition": {}
+}

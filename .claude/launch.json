@@ -1,0 +1,67 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sheep",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5177"
+      ],
+      "port": 5177
+    },
+    {
+      "name": "sheep-logic",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5178"
+      ],
+      "port": 5178
+    },
+    {
+      "name": "sheep-ui",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5179"
+      ],
+      "port": 5179
+    },
+    {
+      "name": "softcopy",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5180",
+        "--directory",
+        "软著"
+      ],
+      "port": 5180
+    },
+    {
+      "name": "sheep-i18n",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5181"
+      ],
+      "port": 5181
+    },
+    {
+      "name": "sheep-ui2",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5182"
+      ],
+      "port": 5182
+    }
+  ]
+}

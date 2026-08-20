@@ -1,0 +1,3548 @@
+<!doctype html><html><head><meta charset="utf-8"><title>羊羊羊之草原牧歌休闲消除游戏软件 V1.0 源程序</title><style>
+@page { size: A4; margin: 14mm 12mm 12mm 12mm; }
+* { box-sizing: border-box; }
+body { margin:0; font-family:"SimSun","宋体",serif; }
+/* A4 高 297mm，减去 @page 的上下边距 14+12 = 271mm。
+   写 273mm 会溢出到下一页，每页后面跟一张空白页（60 页变 120 页）。
+   留 3mm 余量吸收取整误差 */
+.page { page-break-after: always; height: 268mm; display:flex; flex-direction:column; }
+.page:last-child { page-break-after: auto; }
+.hd { border-bottom:1px solid #000; padding-bottom:3mm; margin-bottom:4mm;
+      font-size:10.5pt; display:flex; justify-content:space-between; align-items:baseline; }
+.hd b { font-weight:700; letter-spacing:.5px; }
+.hd span { font-size:9.5pt; }
+.body { flex:1; }
+/* 页码在页脚。.body 是 flex:1，页脚自然被推到版心底部，
+   短页（末页、带图页）的页码也仍然贴着页面下沿，不会浮在半空 */
+.ft { border-top:1px solid #000; padding-top:2.5mm; margin-top:4mm;
+      text-align:center; font-size:9.5pt; }
+pre { margin:0; font-family:"Consolas","Courier New",monospace; font-size:8.6pt; line-height:1.33;
+      white-space:pre-wrap; word-break:break-all; }
+.doc { font-size:10.5pt; line-height:1.5; white-space:pre-wrap; }
+.fig { margin-top:5mm; padding-top:3mm; border-top:1px dashed #999; text-align:center; }
+/* 附录的整屏截图：两行三列。竖版 375:812 满宽一张要 402mm 高、装不下；
+   六张并成一块后图幅取 FIG_ROW_W_MM，剩余高度留给附录标题与开篇一句 */
+.figrow { margin-top:5mm; padding-top:3mm; border-top:1px dashed #999;
+          display:flex; flex-wrap:wrap; gap:4mm 6mm; }
+/* 格子占三分之一版心，图本身窄一些居中：格子定宽才能保证每行正好三张，
+   否则六张图会按图宽自由换行，一行挤进四张 */
+.figrow figure { margin:0; width:calc((100% - 12mm) / 3); text-align:center; }
+.figrow img { width:46mm; border:1px solid #999; display:block; margin:0 auto; }
+.figrow figcaption { font-size:8.5pt; color:#333; margin-top:1.5mm; line-height:1.35; }
+/* 图高上限 64mm 而非 70mm：30 行正文 + 图 + 图注 + 页脚在打印时会差约 5mm，
+   页脚被挤到下一页顶部（实测第 4、12、14 页如此，屏幕布局看不出来，
+   因为 .body 是 flex:1、三个子元素高度之和恒等于页高）。留足余量吸收取整。 */
+.fig img { max-width:140mm; max-height:64mm; border:1px solid #999; }
+.fig .cap { font-size:9.5pt; color:#333; margin-top:1.5mm; }
+.gap { text-align:center; font-size:11pt; padding:6mm 0; border-top:1px dashed #666; border-bottom:1px dashed #666; margin:4mm 0; }
+</style></head><body><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>/* ===== 微信小游戏版 minigame/js/core.js ===== */
+/* eslint-disable */
+/* 核心逻辑：由 extract_core.py 从网页版 index.html 原样抽出，未修改任何算法。
+   这一层不碰 DOM、不碰 wx API，浏览器与小游戏共用。
+   网页版算法有改动时重跑 extract_core.py 同步，不要手改本文件。 */
+
+/* levelDef 按模式取配置，网页版直接读全局 G。这里保留原样，
+   由游戏层在调用 genLevel 之前写 CORE.G，把耦合摆在明面上。 */
+var G = { mode: &quot;normal&quot;, wave: 1, buffs: null, matches: 0,
+          tiles: [], tray: [], rain: [], goal: null, rcfg: null, lv: 1,
+          toolLv: { shuffle: 1, undo: 1, out: 1 } };
+
+/* 有解洗牌里会查道具等级，网页版从 save 里读。这里读 G，语义一致。 */
+function toolLv(k) { return (G.toolLv &amp;&amp; G.toolLv[k]) || 1; }
+function mulberry32(a){
+  return function(){
+    a|=0; a=a+0x6D2B79F5|0;
+    let t=Math.imul(a^a&gt;&gt;&gt;15,1|a);
+    t=t+Math.imul(t^t&gt;&gt;&gt;7,61|t)^t;
+    return ((t^t&gt;&gt;&gt;14)&gt;&gt;&gt;0)/4294967296;
+  };
+}
+
+let RNG=Math.random;
+
+function seedRNG(seed){ RNG = (seed==null) ? Math.random : mulberry32(seed&gt;&gt;&gt;0); }
+
+const rnd = n =&gt; Math.floor(RNG()*n);
+
+function shuffle(a){for(let i=a.length-1;i&gt;0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]];}retu
+rn a;}
+
+const LV_CAP=200;
+
+const LEVELS=[
+  {name:&#x27;晨露坡&#x27;,   pos:[12,6],  cfg:{n:18, layers:3, types:4, q:[],      d:3}},
+  {name:&#x27;微光林&#x27;,   pos:[55,14], cfg:{n:24, layers:3, types:4, q:[],      d:4}},
+  {name:&#x27;风车草地&#x27;, pos:[20,22], cfg:{n:30, layers:4, types:5, q:[6],     d:4}},
+  {name:&#x27;薄荷溪&#x27;,   pos:[60,30], cfg:{n:36, layers:4, types:6, q:[6],     d:3}},
+  {name:&#x27;云杉谷&#x27;,   pos:[14,38], cfg:{n:42, layers:5, types:6, q:[6],     d:3}},
+  {name:&#x27;阳光丘&#x27;,   pos:[58,46], cfg:{n:45, layers:5, types:6, q:[6,6],   d:5}},
+  {name:&#x27;苔藓洞&#x27;,   pos:[18,54], cfg:{n:48, layers:5, types:6, q:[9,9],   d:6}},
+  {name:&#x27;松果径&#x27;,   pos:[56,62], cfg:{n:54, layers:6, types:6.4, q:[9,9], d:4}},
+  {name:&#x27;野花甸&#x27;,   pos:[16,70], cfg:{n:60, layers:6, types:7, q:[9,9],   d:3}},
+  {name:&#x27;远山径&#x27;,   pos:[58,78], cfg:{n:66, layers:6, types:7, q:[12,12], d:5}},
+  {name:&#x27;星月原&#x27;,   pos:[20,86], cfg:{n:72, layers:7, types:7, q:[12,12], d:6}},
+  {name:&#x27;天空牧场&#x27;, pos:[55,94], cfg:{n:81, layers:7, types:7.2, q:[12,12], d:4}}
+];
+
+const MAX_LEVEL=LV_CAP;
+
+const CH_SIZE=10;
+
+const CHAPTERS=[
+  {name:&#x27;晨露草原&#x27;, cls:&#x27;ch-dawn&#x27;, ico:&#x27;fa-mountain-sun&#x27;,
+   intro:&#x27;天刚亮，露水还挂在草尖上。羊群三三两两地散在坡上，谁也不着急。　|　牧羊人说，这片坡是
+最好学的地方——摔一跤也不疼。&#x27;,
+   words:[&#x27;晨露坡&#x27;,&#x27;微光林&#x27;,&#x27;风车草地&#x27;,&#x27;薄荷溪&#x27;,&#x27;云杉谷&#x27;,&#x27;阳光丘&#x27;,&#x27;苔藓洞&#x27;,&#x27;松果径&#x27;,&#x27;野花甸&#x27;,&#x27;远
+山径&#x27;]},
+  {name:&#x27;幽深森林&#x27;, cls:&#x27;ch-forest&#x27;, ico:&#x27;fa-tree&#x27;,</pre></div><div class="ft">第 1 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>   intro:&#x27;越往里走，树越密，光越少。有些草料被藤蔓缠住了，得先解开才能拿。　|　林子里的羊学会了
+一件事：看不清的时候，先别急着动手。&#x27;,
+   words:[&#x27;星月原&#x27;,&#x27;天空牧场&#x27;,&#x27;低语林&#x27;,&#x27;菌菇径&#x27;,&#x27;鹿鸣谷&#x27;,&#x27;藤蔓崖&#x27;,&#x27;萤火沼&#x27;,&#x27;古木道&#x27;,&#x27;静水潭&#x27;,&#x27;暮
+色岭&#x27;]},
+  {name:&#x27;初雪高原&#x27;, cls:&#x27;ch-snow&#x27;, ico:&#x27;fa-snowflake&#x27;,
+   intro:&#x27;第一场雪落下来的时候，整片高原都安静了。冻住的草料要靠旁边的温度化开。　|　这里的规矩
+是：慢一点没关系，但别停下。&#x27;,
+   words:[&#x27;初雪坡&#x27;,&#x27;冰棱谷&#x27;,&#x27;白桦道&#x27;,&#x27;霜风口&#x27;,&#x27;雪兔径&#x27;,&#x27;冻湖畔&#x27;,&#x27;银松林&#x27;,&#x27;寒星台&#x27;,&#x27;雪线崖&#x27;,&#x27;极光
+原&#x27;]},
+  {name:&#x27;云海之巅&#x27;, cls:&#x27;ch-cloud&#x27;, ico:&#x27;fa-cloud-sun&#x27;,
+   intro:&#x27;再往上就出了云层。脚下是翻涌的云海，头顶是从没见过这么近的太阳。　|　这里风大，草却长
+得格外好 —— 牧羊人说，越难站住的地方，越值得多待一会儿。&#x27;,
+   words:[&#x27;入云口&#x27;,&#x27;金光坡&#x27;,&#x27;浮岛渡&#x27;,&#x27;霞光谷&#x27;,&#x27;风起崖&#x27;,&#x27;云中湖&#x27;,&#x27;日照原&#x27;,&#x27;断云桥&#x27;,&#x27;天梯道&#x27;,&#x27;云海
+之巅&#x27;]},
+  {name:&#x27;星夜牧场&#x27;, cls:&#x27;ch-night&#x27;, ico:&#x27;fa-moon&#x27;,
+   intro:&#x27;再往上就是星夜牧场了。据说走到这里的羊，都能在天上找到属于自己的那一颗。　|　牧羊人没
+有再说什么，只是把灯点亮，站在原地看着羊群往前走。&#x27;,
+   words:[&#x27;夜幕坡&#x27;,&#x27;银河渡&#x27;,&#x27;月牙湾&#x27;,&#x27;流星径&#x27;,&#x27;梦境园&#x27;,&#x27;星尘谷&#x27;,&#x27;夜莺林&#x27;,&#x27;幻光崖&#x27;,&#x27;无垠原&#x27;,&#x27;天际
+牧场&#x27;]}
+];
+
+const ROMAN=[&#x27;&#x27;,&#x27;&#x27;,&#x27;Ⅱ&#x27;,&#x27;Ⅲ&#x27;,&#x27;Ⅳ&#x27;,&#x27;Ⅴ&#x27;,&#x27;Ⅵ&#x27;,&#x27;Ⅶ&#x27;,&#x27;Ⅷ&#x27;,&#x27;Ⅸ&#x27;];
+
+function chapterIdx(lv){ return Math.floor((lv-1)/CH_SIZE); }
+
+function chapterOf(lv){ return CHAPTERS[chapterIdx(lv)%CHAPTERS.length]; }
+
+function chapterTitle(lv){
+  const round=Math.floor(chapterIdx(lv)/CHAPTERS.length)+1;
+  return chapterOf(lv).name+(round&gt;1?&#x27; &#x27;+ROMAN[Math.min(round,9)]:&#x27;&#x27;);
+}
+
+function isBoss(lv){ return lv%CH_SIZE===0; }
+
+const GOALS=[&#x27;clear&#x27;,&#x27;steps&#x27;,&#x27;collect&#x27;,&#x27;peel&#x27;,&#x27;rescue&#x27;,&#x27;sprint&#x27;];
+
+function goalOf(lv){
+  if(lv&lt;=12||isBoss(lv)||isBonus(lv)) return &#x27;clear&#x27;;   /* 前 12 关与 Boss/宝箱保持清空 */
+  return GOALS[(lv-13)%GOALS.length];
+}
+
+function makeGoal(kind,tiles,order,stats){
+  const total=stats.groups;
+  const idxOfMatch=k=&gt;{                       /* 第 k 组消除发生在顺序的第几步 */
+    for(let i=0;i&lt;order.length;i++) if(stats.before[i]&gt;=k) return i;
+    return order.length;
+  };
+  if(kind===&#x27;steps&#x27;){
+    const need=Math.max(6,Math.round(total*0.72));
+    const budget=Math.ceil(idxOfMatch(need)*1.09)+1;
+    return {t:&#x27;steps&#x27;,need,budget,used:0,got:0};
+  }
+  if(kind===&#x27;collect&#x27;){
+    const cnt={};
+    tiles.forEach(t=&gt;{ if(t.sp!==&#x27;rain&#x27;) cnt[t.type]=(cnt[t.type]||0)+1; });
+    const cand=Object.keys(cnt).map(Number).filter(c=&gt;cnt[c]&gt;=9);
+    const type=cand.length?cand[rnd(cand.length)]:+Object.keys(cnt)[0];
+    const need=Math.min(4,Math.max(3,Math.floor(cnt[type]/3)));
+    return {t:&#x27;collect&#x27;,type,need,got:0};
+  }</pre></div><div class="ft">第 2 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>  if(kind===&#x27;peel&#x27;){
+    const layers=Math.max.apply(null,tiles.filter(t=&gt;t.q&lt;0).map(t=&gt;t.layer));
+    const from=Math.max(1,layers-3);          /* 最上面四层 */
+    const targets=tiles.filter(t=&gt;t.q&lt;0&amp;&amp;t.layer&gt;=from);
+    return {t:&#x27;peel&#x27;,from,need:targets.length,got:0};
+  }
+  if(kind===&#x27;rescue&#x27;){
+    /* 挑一张埋得最深的牌当「被困的小羊」 */
+    const board=tiles.filter(t=&gt;t.q&lt;0);
+    const deep=board.filter(t=&gt;t.layer===Math.min.apply(null,board.map(x=&gt;x.layer)));
+    const pick=deep[rnd(deep.length)];
+    if(pick) pick.rescue=true;
+    return {t:&#x27;rescue&#x27;,need:1,got:0};
+  }
+  if(kind===&#x27;sprint&#x27;){
+    /* 模拟器测不了时间压力，所以把「非时间部分」也提上来，实际难度只会更高 */
+    const need=Math.max(6,Math.round(total*0.70));
+    return {t:&#x27;sprint&#x27;,need,got:0,secs:60+Math.round(need*3.2)};
+  }
+  return {t:&#x27;clear&#x27;,need:0,got:0};
+}
+
+function isBonus(lv){ return lv&gt;12 &amp;&amp; lv%CH_SIZE===5; }
+
+const SHAPES=[
+  {id:&#x27;square&#x27;,  n:&#x27;方阵&#x27;,   m:()=&gt;true},
+  {id:&#x27;diamond&#x27;, n:&#x27;菱形&#x27;,   m:(u,v)=&gt;Math.pow(Math.abs(u-.5),1.6)+Math.pow(Math.abs(v-.5),1.6)&lt;
+=Math.pow(.56,1.6)},
+  {id:&#x27;circle&#x27;,  n:&#x27;圆丘&#x27;,   m:(u,v)=&gt;(u-.5)*(u-.5)+(v-.5)*(v-.5)&lt;=.30},
+  {id:&#x27;tree&#x27;,    n:&#x27;松树&#x27;,   m:(u,v)=&gt;(v&gt;=.72 ? Math.abs(u-.5)&lt;=.24 : Math.abs(u-.5)&lt;=.16+v*.62)
+},
+  {id:&#x27;cross&#x27;,   n:&#x27;风车&#x27;,   m:(u,v)=&gt;Math.abs(u-.5)&lt;=.32||Math.abs(v-.5)&lt;=.32},
+  {id:&#x27;twin&#x27;,    n:&#x27;双峰&#x27;,   m:(u,v)=&gt;{
+      const d1=Math.hypot(u-.30,v-.40), d2=Math.hypot(u-.70,v-.40);
+      return d1&lt;=.38||d2&lt;=.38||v&gt;=.66; }},
+  {id:&#x27;heart&#x27;,   n:&#x27;心形&#x27;,   m:(u,v)=&gt;{
+      const x=(u-.5)*1.85, y=(.82-v)*1.85;
+      const a=x*x+y*y-.58;
+      return a*a*a - x*x*y*y*.58 &lt;= 0; }},
+  {id:&#x27;tower&#x27;,   n:&#x27;高塔&#x27;,   m:(u,v)=&gt;Math.abs(u-.5)&lt;=.22+v*.28}
+];
+
+function shapeOf(lv){
+  if(lv&lt;=3) return SHAPES[0];                 /* 前三关保持方阵，教学期不要花样 */
+  const h=(lv*2654435761)&gt;&gt;&gt;0;
+  return SHAPES[h%SHAPES.length];
+}
+
+function spMix(lv){
+  const m={};
+  if(lv&gt;=3)  m.coin=.05;
+  if(lv&gt;=4)  m.dbl=.10;
+  if(lv&gt;=5)  m.wool=.03;
+  if(lv&gt;=6)  m.rain=.09;
+  if(lv&gt;=8)  m.freeze=.08;
+  if(lv&gt;=9)  m.gift=.02;
+  if(lv&gt;=12) m.chain=.05;
+  if(lv&gt;=14) m.supply=.05;
+  if(lv&gt;=16) m.mystery=.07;
+  if(lv&gt;=18) m.torch=.03;</pre></div><div class="ft">第 3 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>  if(lv&gt;=22) m.bomb=.03;
+  if(lv&gt;=34) m.mystery=.09;
+  if(lv&gt;=42) m.freeze=.10;
+  return m;
+}
+
+function levelDef(lv){
+  if(G.mode===&#x27;endless&#x27;){
+    const base=JSON.parse(JSON.stringify(rawLevelDef(waveLevel(G.wave)).cfg));
+    const b=G.buffs||{};
+    if(b.slots) base.slots=BASE_SLOT+b.slots;
+    if(b.types) base.types=Math.max(4,+(base.types-b.types).toFixed(2));
+    if(b.tiles) base.n=Math.max(18,base.n-b.tiles);
+    base.shape=shapeOf(9+G.wave);
+    return {name:&#x27;无尽草原&#x27;,cfg:base};
+  }
+  if(G.mode===&#x27;weekly&#x27;){
+    const base=JSON.parse(JSON.stringify(rawLevelDef(WEEKLY_LV).cfg));
+    base.shape=shapeOf(WEEKLY_LV+weekIndex());
+    weeklyMod().apply(base);
+    return {name:&#x27;本周挑战 · &#x27;+weeklyMod().n, cfg:base};
+  }
+  return rawLevelDef(lv);
+}
+
+function rawLevelDef(lv){
+  if(isBonus(lv)){
+    /* 宝箱关：稳赢 + 必掉图鉴，作用是给曲线一个喘息，不是给难度 */
+    return { name:&#x27;宝箱营地&#x27;, bonus:true, cfg:{
+      n:36, layers:4, types:5, q:[6], d:3, shape:shapeOf(lv),
+      sp:{rain:.10, coin:.14, wool:.10, gift:.06}
+    }};
+  }
+  if(lv&lt;=LEVELS.length){
+    const L=LEVELS[lv-1];
+    L.cfg.shape=shapeOf(lv);
+    return L;
+  }
+  const t=Math.min(1,(lv-12)/38);   /* 设计范围铺到第 50 关，之后进入平台期 */
+  return {
+    name:chapterOf(lv).words[(lv-1)%CH_SIZE]+(chapterIdx(lv)&gt;=CHAPTERS.length?&#x27; &#x27;+ROMAN[Math.min
+(Math.floor(chapterIdx(lv)/CHAPTERS.length)+1,9)]:&#x27;&#x27;),
+    cfg:{
+      n:Math.round((78+18*t)/3)*3,
+      layers:7,
+      /* d 必须随关号单调上升。之前按 4/5/6 循环，会让曲线出现锯齿 */
+      types:+(7.2+0.8*t).toFixed(2),
+      q:[12,12],
+      /* Boss 关的压力来源是限时，盘面上不该再叠一层 —— d 封顶 5 */
+      d:(isBoss(lv)?Math.min(5,4+Math.round(1.5*t)):4+Math.round(1.5*t)),
+      shape:shapeOf(lv),
+      biq:lv&gt;=14,          /* 双向牌堆：两端都能取，是约束放宽 */
+      sp:spMix(lv)
+    }
+  };
+}
+
+function levelName(lv){ return levelDef(lv).name; }
+
+const TYPE_DEFS=[</pre></div><div class="ft">第 4 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>  {i:&#x27;fa-leaf&#x27;,        e:&#x27;🌿&#x27;, c:&#x27;#4C9A5A&#x27;},
+  {i:&#x27;fa-seedling&#x27;,    e:&#x27;🌱&#x27;, c:&#x27;#7DBB6E&#x27;},
+  {i:&#x27;fa-tree&#x27;,        e:&#x27;🌳&#x27;, c:&#x27;#2E6B3E&#x27;},
+  {i:&#x27;fa-mountain&#x27;,    e:&#x27;⛰️&#x27;, c:&#x27;#8FB98A&#x27;},
+  {i:&#x27;fa-droplet&#x27;,     e:&#x27;💧&#x27;, c:&#x27;#5FB8B0&#x27;},
+  {i:&#x27;fa-sun&#x27;,         e:&#x27;☀️&#x27;, c:&#x27;#F0B429&#x27;},
+  {i:&#x27;fa-cloud&#x27;,       e:&#x27;☁️&#x27;, c:&#x27;#8FB4D8&#x27;},
+  {i:&#x27;fa-apple-whole&#x27;, e:&#x27;🍎&#x27;, c:&#x27;#E2665A&#x27;},
+  {i:&#x27;fa-carrot&#x27;,      e:&#x27;🥕&#x27;, c:&#x27;#E2874A&#x27;},
+  {i:&#x27;fa-wheat-awn&#x27;,   e:&#x27;🌾&#x27;, c:&#x27;#C8A24A&#x27;},
+  {i:&#x27;fa-star&#x27;,        e:&#x27;⭐&#x27;, c:&#x27;#E8B33C&#x27;},
+  {i:&#x27;fa-fish&#x27;,        e:&#x27;🐟&#x27;, c:&#x27;#4FA3C7&#x27;},
+  {i:&#x27;fa-feather&#x27;,     e:&#x27;🪶&#x27;, c:&#x27;#A98BC9&#x27;},
+  {i:&#x27;fa-clover&#x27;,      e:&#x27;🍀&#x27;, c:&#x27;#58A86B&#x27;},
+  {i:&#x27;fa-moon&#x27;,        e:&#x27;🌙&#x27;, c:&#x27;#7B7FC4&#x27;},
+  {i:&#x27;fa-mug-hot&#x27;,     e:&#x27;☕&#x27;, c:&#x27;#A0785A&#x27;}
+];
+
+const GRID=14;
+
+const BASE_SLOT=7;
+
+let SLOT_N=7;
+
+const COMBO_WINDOW=3000;
+
+function mkTile(id,layer,x,y,q,qp){
+  return {id,type:0,layer,x,y,q,qp,
+          removed:false,inTray:false,matching:false,el:null,biq:false,
+          sp:null,frozen:false,chainN:0,bombK:0,bombLeft:0,shell:false,shown:false};
+}
+
+function genLevel(lv){
+  const cfg=levelDef(lv).cfg;
+  const tiles=[];
+  /* 1) 每层可用格位（层与层之间半格错位，形成堆叠感） */
+  SLOT_N=cfg.slots||BASE_SLOT;
+  const shape=cfg.shape||SHAPES[0];
+  /* 层间收缩固定为 k：覆盖率是形状影响难度的真正通道，动它会让已定标的模型失效。
+     形状裁掉的容量通过「块数上限留出余量」来吸收，而不是靠放宽收缩 */
+  const layerSlots=[];
+  for(let k=0;k&lt;cfg.layers;k++){
+    const lo=k, hi=GRID-2-k;
+    if(hi&lt;lo) break;
+    const span=Math.max(1,hi-lo);
+    const all=[], keep=[];
+    for(let x=lo;x&lt;=hi;x+=2) for(let y=lo;y&lt;=hi;y+=2){
+      const p={x,y};
+      all.push(p);
+      /* 归一化到本层区域的 [0,1]²，用同一个遮罩裁剪，整摞牌轮廓一致 */
+      if(shape.m((x-lo)/span,(y-lo)/span)) keep.push(p);
+    }
+    layerSlots.push(shuffle(keep.length&gt;=Math.min(3,all.length)?keep:all));
+  }
+  const K=layerSlots.length;
+  const caps=layerSlots.map(s=&gt;s.length);
+  const totalCap=caps.reduce((a,b)=&gt;a+b,0);
+  let N=Math.min(cfg.n,totalCap - totalCap%3);
+
+  /* 2) 分配每层块数：底层最宽、越往上越少且越密，形成金字塔 */</pre></div><div class="ft">第 5 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>  const w=caps.map((c,k)=&gt;c*(1+0.10*k));
+  const sw=w.reduce((a,b)=&gt;a+b,0);
+  const counts=caps.map((c,k)=&gt;Math.min(c,Math.max(1,Math.round(N*w[k]/sw))));
+  let diff=N-counts.reduce((a,b)=&gt;a+b,0);
+  for(let k=0;diff&gt;0&amp;&amp;k&lt;K;k++){ const add=Math.min(diff,caps[k]-counts[k]); counts[k]+=add; diff
+-=add; }
+  for(let k=0;diff&lt;0&amp;&amp;k&lt;K;k++){ const sub=Math.min(-diff,counts[k]-1); counts[k]-=sub; diff+=sub
+; }
+
+  /* 3) 落位 */
+  let uid=0;
+  for(let k=0;k&lt;K;k++){
+    for(let i=0;i&lt;counts[k];i++){
+      const s=layerSlots[k][i];
+      tiles.push(mkTile(uid++,k,s.x,s.y,-1,0));
+    }
+  }
+  /* 4) 底部牌堆 */
+  const queues=[];
+  cfg.q.forEach((len,qi)=&gt;{
+    const arr=[];
+    for(let p=0;p&lt;len;p++){
+      const t=mkTile(uid++,-1,0,0,qi,p);
+      t.biq=!!cfg.biq;
+      arr.push(t); tiles.push(t);
+    }
+    queues.push(arr);
+  });
+
+  /* 5) 修剪为 3 的倍数（从最上层拿掉多余的） */
+  while(tiles.length%3!==0){
+    let idx=-1,best=-2;
+    for(let i=0;i&lt;tiles.length;i++){ if(tiles[i].q&lt;0&amp;&amp;tiles[i].layer&gt;best){best=tiles[i].layer;i
+dx=i;} }
+    if(idx&lt;0) break;
+    tiles.splice(idx,1);
+  }
+
+  /* 6) 反向求解：先算一条合法的“可消除顺序”，再沿这条顺序染色 —— 保证有解 */
+  const order=solveOrder(tiles,queues);
+  paintOrder(order,planColors(cfg.types,order.length/3),{},cfg.d||3);
+  /* 7) 特殊牌：沿着同一条顺序反推能放在哪，保证不会卡死必胜路线 */
+  applySpecials(order,cfg);
+  /* 8) 把必胜顺序交出去：关卡目标要用它算配额，失败回放要用它演示 */
+  return {tiles,queues,order,stats:canonicalStats(order)};
+}
+
+const SPECIALS={
+  freeze :{icon:&#x27;fa-snowflake&#x27;,   emo:&#x27;❄️&#x27;, name:&#x27;冰冻牌&#x27;, tip:&#x27;被冰封住了，先消掉它同层紧挨着的
+一张牌就能解冻&#x27;},
+  chain  :{icon:&#x27;fa-link&#x27;,        emo:&#x27;⛓️&#x27;, name:&#x27;锁链牌&#x27;, tip:&#x27;锁着的牌，全场再消够指定组数就会
+自动解开&#x27;},
+  dbl    :{icon:&#x27;fa-layer-group&#x27;, emo:&#x27;📦&#x27;, name:&#x27;双层牌&#x27;, tip:&#x27;外面裹了一层草垛，要点两下：第一
+下拆壳，第二下才进卡槽&#x27;},
+  rain   :{icon:&#x27;fa-rainbow&#x27;,     emo:&#x27;🌈&#x27;, name:&#x27;彩虹牌&#x27;, tip:&#x27;不占卡槽格子！单独放在上面的彩虹
+槽里，凑齐 3 张自动消除&#x27;},
+  bomb   :{icon:&#x27;fa-bomb&#x27;,        emo:&#x27;💣&#x27;, name:&#x27;炸弹牌&#x27;, tip:&#x27;进了卡槽就开始倒数，数完还没消掉
+就直接失败&#x27;},
+  mystery:{icon:&#x27;fa-question&#x27;,    emo:&#x27;❓&#x27;, name:&#x27;谜之牌&#x27;, tip:&#x27;花色是盖着的，只有进了卡槽才翻开
+，没法提前规划&#x27;},</pre></div><div class="ft">第 6 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>  /* 以下四种只在「被消除时」给奖励，完全不参与规则判定，对有解性零风险 */
+  coin   :{icon:&#x27;fa-coins&#x27;,       emo:&#x27;🪙&#x27;, name:&#x27;金币牌&#x27;, tip:&#x27;消掉它会额外掉金币，看到就先拿&#x27;},
+  wool   :{icon:&#x27;fa-feather&#x27;,     emo:&#x27;🪶&#x27;, name:&#x27;羊毛牌&#x27;, tip:&#x27;消掉它会额外掉羊毛，牧场建设就靠
+它&#x27;},
+  gift   :{icon:&#x27;fa-gift&#x27;,        emo:&#x27;🎁&#x27;, name:&#x27;礼盒牌&#x27;, tip:&#x27;消掉它会随机送一个道具&#x27;},
+  torch  :{icon:&#x27;fa-lightbulb&#x27;,   emo:&#x27;💡&#x27;, name:&#x27;灯笼牌&#x27;, tip:&#x27;消掉它会照亮 3 张谜之牌，把盖着的
+花色翻开&#x27;},
+  supply :{icon:&#x27;fa-truck-ramp-box&#x27;, emo:&#x27;📥&#x27;, name:&#x27;补给牌&#x27;, tip:&#x27;牌堆里盖着的补给，全场消够指定
+组数才会送上来&#x27;}
+};
+
+const REWARD_SP={coin:1,wool:1,gift:1,torch:1};
+
+function canonicalStats(order){
+  const tray=[], leave=new Map(), before=new Array(order.length), trios=[];
+  let m=0;
+  for(let i=0;i&lt;order.length;i++){
+    before[i]=m;
+    const t=order[i]; tray.push(t);
+    const same=tray.filter(x=&gt;x.type===t.type);
+    if(same.length&gt;=3){
+      const trio=same.slice(0,3);
+      trio.forEach(x=&gt;{ leave.set(x,i); tray.splice(tray.indexOf(x),1); });
+      trios.push(trio); m++;
+    }
+  }
+  return {leave,before,trios,groups:m};
+}
+
+function neighbors(t,tiles){
+  return tiles.filter(o=&gt;o!==t &amp;&amp; o.q&lt;0 &amp;&amp; o.layer===t.layer &amp;&amp;
+    ((Math.abs(o.x-t.x)===2 &amp;&amp; o.y===t.y) || (Math.abs(o.y-t.y)===2 &amp;&amp; o.x===t.x)));
+}
+
+function applySpecials(order,cfg){
+  const mix=cfg.sp; if(!mix) return;
+  const {leave,before,trios}=canonicalStats(order);
+  const pos=new Map(); order.forEach((t,i)=&gt;pos.set(t,i));
+  const total=order.length;
+
+  const take=(key,ratio,pick)=&gt;{
+    if(!ratio) return;
+    let want=Math.round(total*ratio);
+    const cand=shuffle(order.filter(t=&gt;!t.sp&amp;&amp;pick(t)));
+    for(const t of cand){ if(want&lt;=0) break; t.sp=key; want--; }
+  };
+
+  /* 彩虹牌：必须整组三张一起转换，否则原花色会少一张、永远配不齐。
+     转换整组之后每种花色的张数仍是 3 的倍数，必胜顺序原样成立 */
+  if(mix.rain){
+    const want=Math.max(1,Math.round(total*mix.rain/3));
+    shuffle(trios.filter(g=&gt;g.every(t=&gt;!t.sp))).slice(0,want)
+      .forEach(g=&gt;g.forEach(t=&gt;{ t.sp=&#x27;rain&#x27;; }));
+  }
+
+  /* 冰冻：必胜顺序里，它之前必须已经消掉过一个同层邻居，否则永远解不开 */
+  take(&#x27;freeze&#x27;,mix.freeze,t=&gt;{
+    if(t.q&gt;=0) return false;
+    const i=pos.get(t);
+    return neighbors(t,order).some(o=&gt;pos.get(o)&lt;i);</pre></div><div class="ft">第 7 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>  });
+  /* 锁链：锁的组数不能超过它在必胜顺序里之前已完成的组数 */
+  take(&#x27;chain&#x27;,mix.chain,t=&gt;before[pos.get(t)]&gt;=2);
+  order.forEach(t=&gt;{ if(t.sp===&#x27;chain&#x27;){
+    const b=before[pos.get(t)];
+    t.chainN=1+rnd(Math.max(1,Math.min(b,4)));
+  }});
+  /* 炸弹：倒数必须够它在必胜顺序里撑到自己那组消掉 */
+  take(&#x27;bomb&#x27;,mix.bomb,t=&gt;{
+    const i=pos.get(t), lv=leave.get(t);
+    return lv!==undefined &amp;&amp; lv-i&lt;=6;
+  });
+  order.forEach(t=&gt;{ if(t.sp===&#x27;bomb&#x27;){
+    t.bombK=(leave.get(t)-pos.get(t))+3+rnd(3);
+  }});
+  /* 双层：只多花一次点击，不影响顺序 */
+  take(&#x27;dbl&#x27;,mix.dbl,()=&gt;true);
+  order.forEach(t=&gt;{ if(t.sp===&#x27;dbl&#x27;) t.shell=true; });
+  /* 谜之：只藏信息 */
+  take(&#x27;mystery&#x27;,mix.mystery,()=&gt;true);
+  /* 补给牌：只放在牌堆后半段，解锁组数由必胜顺序倒推，保证送上来时还来得及取 */
+  take(&#x27;supply&#x27;,mix.supply,t=&gt;t.q&gt;=0 &amp;&amp; before[pos.get(t)]&gt;=2);
+  order.forEach(t=&gt;{ if(t.sp===&#x27;supply&#x27;){
+    const b=before[pos.get(t)];
+    t.chainN=1+rnd(Math.max(1,Math.min(b,5)));
+  }});
+  /* 奖励类：纯掉落，不参与任何判定 */
+  take(&#x27;coin&#x27;,mix.coin,()=&gt;true);
+  take(&#x27;wool&#x27;,mix.wool,()=&gt;true);
+  take(&#x27;gift&#x27;,mix.gift,()=&gt;true);
+  take(&#x27;torch&#x27;,mix.torch,t=&gt;t.q&lt;0);
+  /* 迷雾层：整层盖住，用的是同一套隐藏逻辑 */
+  if(mix.fogLayer!=null){
+    order.forEach(t=&gt;{ if(t.q&lt;0&amp;&amp;t.layer===mix.fogLayer&amp;&amp;!t.sp) t.sp=&#x27;mystery&#x27;; });
+  }
+  order.forEach(t=&gt;{ if(t.sp===&#x27;freeze&#x27;) t.frozen=true; });
+}
+
+function planColors(types,m){
+  const full=Math.max(1,Math.floor(types)), frac=types-full;
+  const w=[]; for(let i=0;i&lt;full;i++) w.push(1);
+  if(frac&gt;0.01) w.push(frac);
+  const k=Math.min(w.length,m,TYPE_DEFS.length);
+  w.length=k;
+  const sw=w.reduce((a,b)=&gt;a+b,0);
+  const cnt=w.map(x=&gt;Math.max(1,Math.round(m*x/sw)));
+  let diff=m-cnt.reduce((a,b)=&gt;a+b,0), guard=999;
+  for(let i=0;diff&gt;0&amp;&amp;guard--&gt;0;i=(i+1)%k){ cnt[i]++; diff--; }
+  guard=999;
+  for(let i=k-1;diff&lt;0&amp;&amp;guard--&gt;0;i=(i+k-1)%k){ if(cnt[i]&gt;1){ cnt[i]--; diff++; } }
+  const palette=shuffle(TYPE_DEFS.map((_,x)=&gt;x)).slice(0,k);
+  const remain={};
+  palette.forEach((c,j)=&gt;remain[c]=cnt[j]*3);
+  return remain;
+}
+
+function paintOrder(order,remain,tray0,cap){
+  const tray=Object.assign({},tray0);
+  let size=0; for(const c in tray) size+=tray[c];
+  cap=Math.max(3,Math.min(SLOT_N-1,cap),size);</pre></div><div class="ft">第 8 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>  const at=c=&gt;tray[c]||0;
+  const one=a=&gt;a[rnd(a.length)];
+  for(let i=0;i&lt;order.length;i++){
+    /* 彩虹牌靠 sp 配对、走独立槽，既不占卡槽也不参与花色配额，直接跳过 */
+    if(order[i].sp===&#x27;rain&#x27;) continue;
+    const avail=Object.keys(remain).map(Number).filter(c=&gt;remain[c]&gt;0);
+    if(!avail.length) break;
+    const done =avail.filter(c=&gt;at(c)===2);   /* 放下即三连，槽位 -2 */
+    const half =avail.filter(c=&gt;at(c)===1);   /* 放下变成两张，槽位 +1 */
+    const fresh=avail.filter(c=&gt;at(c)===0);   /* 开一个新花色，槽位 +1 */
+    let c;
+    if(size&gt;=cap){
+      /* 到顶了必须收缩。下面的 cap-1 规则保证此时 done 一定非空 */
+      c = done.length?one(done) : half.length?one(half) : one(fresh);
+    }else if(size===cap-1){
+      /* 下一步就会顶满，先把某个花色凑到两张，确保届时消得掉 */
+      c = half.length?one(half) : fresh.length?one(fresh) : one(done);
+    }else{
+      /* 还有余量：多开新花色制造压力，偶尔推进已有的 */
+      c = (fresh.length &amp;&amp; RNG()&lt;.75) ? one(fresh)
+        : half.length?one(half) : fresh.length?one(fresh) : one(done);
+    }
+    order[i].type=c;
+    remain[c]--;
+    if(at(c)===2){ tray[c]=0; size-=2; } else { tray[c]=at(c)+1; size++; }
+  }
+}
+
+function overlap(a,b){ return Math.abs(a.x-b.x)&lt;2 &amp;&amp; Math.abs(a.y-b.y)&lt;2; }
+
+function freeIn(t,set){
+  if(t.q&gt;=0){
+    /* 双向牌堆：只要是某一端就能取，是约束放宽，有解性天然保持 */
+    let smaller=false, larger=false;
+    for(const o of set){
+      if(o===t||o.q!==t.q) continue;
+      if(o.qp&lt;t.qp) smaller=true; else larger=true;
+      if(smaller&amp;&amp;(!t.biq||larger)) break;
+    }
+    return t.biq ? !(smaller&amp;&amp;larger) : !smaller;
+  }
+  for(const o of set){ if(o!==t &amp;&amp; o.q&lt;0 &amp;&amp; o.layer&gt;t.layer &amp;&amp; overlap(o,t)) return false; }
+  return true;
+}
+
+function solveOrder(tiles){
+  const set=new Set(tiles);
+  const order=[];
+  let guard=tiles.length+5;
+  while(set.size &amp;&amp; guard--&gt;0){
+    const free=[];
+    for(const t of set) if(freeIn(t,set)) free.push(t);
+    if(!free.length){ for(const t of set) order.push(t); break; }
+    /* 偏向先取高层，视觉上三连更自然 */
+    free.sort((a,b)=&gt;(b.layer-a.layer)||(RNG()-.5));
+    const take=free[rnd(Math.max(1,Math.min(free.length,4)))];
+    order.push(take); set.delete(take);
+  }
+  return order;
+}</pre></div><div class="ft">第 9 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>
+const WEEKLY=[
+  {id:&#x27;narrow&#x27;, n:&#x27;窄槽周&#x27;,   d:&#x27;卡槽只有 5 格&#x27;,       apply:c=&gt;{ c.slots=5; c.d=Math.min(c.d,4)
+; }},
+  {id:&#x27;colors&#x27;, n:&#x27;缤纷周&#x27;,   d:&#x27;花色多一种&#x27;,           apply:c=&gt;{ c.types=+(c.types+1).toFixed(
+2); }},
+  {id:&#x27;fog&#x27;,    n:&#x27;迷雾周&#x27;,   d:&#x27;一半的牌盖着花色&#x27;,     apply:c=&gt;{ c.sp=Object.assign({},c.sp,{m
+ystery:.42}); }},
+  {id:&#x27;wide&#x27;,   n:&#x27;宽槽周&#x27;,   d:&#x27;卡槽多两格，但花色翻倍&#x27;, apply:c=&gt;{ c.slots=9; c.types=+(c.type
+s*1.35).toFixed(2); }},
+  {id:&#x27;ice&#x27;,    n:&#x27;霜冻周&#x27;,   d:&#x27;冰冻牌大量出现&#x27;,       apply:c=&gt;{ c.sp=Object.assign({},c.sp,{f
+reeze:.26}); }},
+  {id:&#x27;boom&#x27;,   n:&#x27;爆破周&#x27;,   d:&#x27;炸弹牌大量出现&#x27;,       apply:c=&gt;{ c.sp=Object.assign({},c.sp,{b
+omb:.10}); }}
+];
+
+function weekIndex(d){
+  d=d||new Date();
+  return Math.floor((Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/86400000+4)/7);
+}
+
+function weeklyMod(){ return WEEKLY[weekIndex()%WEEKLY.length]; }
+
+const WEEKLY_LV=18;
+
+function ckChar(s){ let h=7; for(let i=0;i&lt;s.length;i++) h=(h*31+s.charCodeAt(i))%36; return h.t
+oString(36).toUpperCase(); }
+
+function makeCode(lv,seed,res){
+  let body=(Math.max(1,Math.min(MAX_LEVEL,lv))*16777216 + ((seed&gt;&gt;&gt;0)%16777216)).toString(36).to
+UpperCase();
+  if(res){
+    /* 10ms 精度。原来按整秒四舍五入，最大 ±500ms 误差，
+       势均力敌时慢 400ms 也会被判胜 —— 而那正是对战最需要准的区间 */
+    const cs=Math.max(0,Math.min(599999,Math.round(res.time/10)));
+    const cb=Math.max(0,Math.min(63,res.combo|0));
+    body+=&#x27;.&#x27;+(cs*64+cb).toString(36).toUpperCase();
+  }
+  return body+ckChar(body);
+}
+
+function parseCode(c){
+  /* 分隔符统一成 &#x27;.&#x27; 再算校验，这样 . - _ / 四种写法都认 */
+  const raw=String(c).toUpperCase().replace(/\s+/g,&#x27;&#x27;).replace(/[\-_/]/g,&#x27;.&#x27;);
+  if(raw.length&lt;2) return null;
+  const body=raw.slice(0,-1);
+  if(ckChar(body)!==raw.slice(-1)) return null;
+  const bits=body.split(&#x27;.&#x27;).filter(Boolean);
+  const head=(bits[0]||&#x27;&#x27;).replace(/[^0-9A-Z]/g,&#x27;&#x27;);
+  const n=parseInt(head,36);
+  if(!isFinite(n)||n&lt;=0) return null;
+  const lv=Math.floor(n/16777216), seed=n%16777216;
+  if(lv&lt;1||lv&gt;MAX_LEVEL) return null;
+  let target=null;
+  if(bits[1]){
+    const m=parseInt(bits[1].replace(/[^0-9A-Z]/g,&#x27;&#x27;),36);
+    if(isFinite(m)&amp;&amp;m&gt;0) target={time:Math.floor(m/64)*10, combo:m%64};
+  }
+  return {lv,seed,target};
+}</pre></div><div class="ft">第 10 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>
+function dailySeed(d){ d=d||new Date(); return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getD
+ate(); }
+
+function waveLevel(w){ return 6+w*2; }
+
+const TOOL_KEYS=[&#x27;shuffle&#x27;,&#x27;undo&#x27;,&#x27;out&#x27;];
+
+function tileNb(a,b){
+  return a.q&lt;0&amp;&amp;b.q&lt;0&amp;&amp;a.layer===b.layer&amp;&amp;
+    ((Math.abs(a.x-b.x)===2&amp;&amp;a.y===b.y)||(Math.abs(a.y-b.y)===2&amp;&amp;a.x===b.x));
+}
+
+function solveOrderLocked(rest,startMatches){
+  const set=new Set(rest), order=[];
+  const frozen=new Map();
+  rest.forEach(t=&gt;{ if(t.sp===&#x27;freeze&#x27;&amp;&amp;t.frozen) frozen.set(t,true); });
+  let guard=rest.length+5;
+  while(set.size&amp;&amp;guard--&gt;0){
+    const m=startMatches+Math.floor(order.length/3);
+    const free=[];
+    for(const t of set){
+      if(!freeIn(t,set)) continue;
+      if(t.sp===&#x27;freeze&#x27;&amp;&amp;frozen.get(t)) continue;
+      if((t.sp===&#x27;chain&#x27;||t.sp===&#x27;supply&#x27;)&amp;&amp;m&lt;t.chainN) continue;
+      free.push(t);
+    }
+    if(!free.length) return null;
+    free.sort((a,b)=&gt;(b.layer-a.layer)||(RNG()-.5));
+    const t=free[rnd(Math.max(1,Math.min(free.length,4)))];
+    set.delete(t); order.push(t);
+    for(const o of set) if(o.sp===&#x27;freeze&#x27;&amp;&amp;frozen.get(o)&amp;&amp;tileNb(o,t)) frozen.set(o,false);
+  }
+  return set.size?null:order;
+}
+
+function retimeBombs(rest,order,held,rainHeld){
+  const tray=held.slice(), rainSlot=rainHeld.slice();
+  const pos=new Map(); order.forEach((t,i)=&gt;pos.set(t,i));
+  const clearAt=new Map();
+  for(let i=0;i&lt;order.length;i++){
+    const t=order[i];
+    if(t.sp===&#x27;rain&#x27;){
+      rainSlot.push(t);
+      if(rainSlot.length&gt;=3){ rainSlot.forEach(x=&gt;clearAt.set(x,i)); rainSlot.length=0; }
+      continue;
+    }
+    tray.push(t);
+    const by={}; tray.forEach(x=&gt;{ (by[x.type]=by[x.type]||[]).push(x); });
+    let trio=null; for(const k in by) if(by[k].length&gt;=3){ trio=by[k].slice(0,3); break; }
+    if(trio) trio.forEach(x=&gt;{ clearAt.set(x,i); tray.splice(tray.indexOf(x),1); });
+  }
+  let ok=true;
+  rest.concat(held).forEach(t=&gt;{
+    if(t.sp!==&#x27;bomb&#x27;) return;
+    const c=clearAt.get(t);
+    if(c===undefined){ ok=false; return; }
+    const start=pos.has(t)?pos.get(t):-1;
+    let ins=0;                                  /* 倒数按「之后有几张牌入槽」走，彩虹牌不入槽 */
+    for(let i=start+1;i&lt;=c;i++) if(order[i]&amp;&amp;order[i].sp!==&#x27;rain&#x27;) ins++;</pre></div><div class="ft">第 11 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>    t.bombK=ins+2;
+    if(start&lt;0) t.bombLeft=t.bombK;             /* 已在卡槽里的炸弹，倒数一并重置 */
+  });
+  return ok;
+}
+
+function verifyPlayable(rest,order,held,rainHeld){
+  const set=new Set(rest), tray=held.slice(), rainSlot=rainHeld.slice();
+  const frozen=new Map(), bomb=new Map();
+  rest.forEach(t=&gt;{ if(t.sp===&#x27;freeze&#x27;&amp;&amp;t.frozen) frozen.set(t,true); });
+  tray.forEach(t=&gt;{ if(t.sp===&#x27;bomb&#x27;) bomb.set(t,t.bombLeft||t.bombK); });
+  let m=G.matches;
+  for(const t of order){
+    if(!freeIn(t,set)) return false;
+    if(t.sp===&#x27;freeze&#x27;&amp;&amp;frozen.get(t)) return false;
+    if((t.sp===&#x27;chain&#x27;||t.sp===&#x27;supply&#x27;)&amp;&amp;m&lt;t.chainN) return false;
+    set.delete(t);
+    for(const o of set) if(o.sp===&#x27;freeze&#x27;&amp;&amp;frozen.get(o)&amp;&amp;tileNb(o,t)) frozen.set(o,false);
+    if(t.sp===&#x27;rain&#x27;){ rainSlot.push(t); if(rainSlot.length&gt;=3){ rainSlot.length=0; m++; } conti
+nue; }
+    tray.push(t);
+    if(t.sp===&#x27;bomb&#x27;) bomb.set(t,t.bombK);
+    let blew=false;
+    bomb.forEach((v,k)=&gt;{ if(k!==t&amp;&amp;tray.includes(k)){ bomb.set(k,v-1); if(v-1&lt;=0) blew=true; } 
+});
+    const by={}; tray.forEach(x=&gt;{ (by[x.type]=by[x.type]||[]).push(x); });
+    let trio=null; for(const k in by) if(by[k].length&gt;=3){ trio=by[k].slice(0,3); break; }
+    if(trio){ trio.forEach(x=&gt;{ tray.splice(tray.indexOf(x),1); bomb.delete(x); }); m++; }
+    else if(blew) return false;
+    if(tray.length&gt;=SLOT_N) return false;
+  }
+  return set.size===0 &amp;&amp; tray.length===0 &amp;&amp; rainSlot.length===0;
+}
+
+function reshuffleSolvable(){
+  const rest=G.tiles.filter(t=&gt;!t.removed);
+  if(rest.length&lt;3) return &#x27;empty&#x27;;
+  /* 用本局真正的配置。每日/周常/无尽的 G.lv 都是 1，
+     直接 levelDef(G.lv) 会回落到第 1 关，把题面洗成幼儿园难度 */
+  const cfg=G.rcfg||{types:levelDef(G.lv).cfg.types,d:levelDef(G.lv).cfg.d};
+  const cap=Math.max(3,Math.min(SLOT_N-1,(cfg.d||3)-(toolLv(&#x27;shuffle&#x27;)-1)));
+  const held=G.tray.filter(x=&gt;!x.matching);
+  const rainHeld=G.rain.filter(x=&gt;!x.matching);
+  const heldCount={};
+  held.forEach(t=&gt;heldCount[t.type]=(heldCount[t.type]||0)+1);
+
+  const plain=rest.filter(t=&gt;t.sp!==&#x27;rain&#x27;);     /* 彩虹牌不参与花色配额 */
+  const backup=rest.map(t=&gt;t.type);
+  const bombBackup=rest.concat(held).map(t=&gt;[t,t.bombK,t.bombLeft]);
+
+  let needTotal=0;
+  for(const c in heldCount) needTotal+=3-heldCount[c];
+  const triples=(plain.length-needTotal)/3;
+  if(triples&lt;0||triples%1!==0) return &#x27;fail&#x27;;
+
+  for(let attempt=0;attempt&lt;14;attempt++){
+    const order=solveOrderLocked(rest,G.matches);
+    if(!order) continue;
+    const remain={};
+    for(const c in heldCount) remain[c]=3-heldCount[c];</pre></div><div class="ft">第 12 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>    const pool=planColors(cfg.types,triples);
+    for(const c in pool) remain[c]=(remain[c]||0)+(+pool[c]);
+    /* collect 目标：保证目标花色还留在盘面上，否则任务被无声废掉。
+       搬运量必须是 3 的倍数，否则会破坏「每色总数是 3 的倍数」这条不变量 */
+    const g=G.goal;
+    if(g&amp;&amp;g.t===&#x27;collect&#x27;){
+      const want=3*Math.max(1,g.need-g.got);
+      if((remain[g.type]||0)&lt;want){
+        const donor=Object.keys(remain).map(Number)
+          .filter(c=&gt;c!==g.type).sort((a,b)=&gt;remain[b]-remain[a])[0];
+        if(donor!=null){
+          let move=Math.min(want-(remain[g.type]||0),Math.max(0,(remain[donor]||0)-3));
+          move=Math.floor(move/3)*3;
+          if(move&gt;0){ remain[donor]-=move; remain[g.type]=(remain[g.type]||0)+move; }
+        }
+      }
+    }
+    paintOrder(order,remain,heldCount,cap);
+    if(!retimeBombs(rest,order,held,rainHeld)) continue;
+    if(verifyPlayable(rest,order,held,rainHeld)) return &#x27;ok&#x27;;
+  }
+  rest.forEach((t,i)=&gt;{ t.type=backup[i]; });   /* 洗不出可解局面，原样还回去 */
+  bombBackup.forEach(([t,k,l])=&gt;{ t.bombK=k; t.bombLeft=l; });
+  return &#x27;fail&#x27;;
+}
+
+const SAYINGS=[
+  &#x27;风把云吹散了，剩下的时间，都用来陪你喜欢的羊吧。&#x27;,
+  &#x27;慢一点也没关系，草原上的路从来不催人。&#x27;,
+  &#x27;今天的第一缕阳光，已经替你晒暖了牧场。&#x27;,
+  &#x27;把烦恼交给风，把青草留给羊。&#x27;,
+  &#x27;走得远不如走得稳，羊群会一直等你。&#x27;
+];
+
+const CK_COIN=[20,25,30,40,50,60,100];
+
+const PRICE={shuffle:120,undo:80,out:200};
+
+const HELP_BASE=[
+  [&#x27;fa-layer-group&#x27;,&#x27;怎么算赢&#x27;,&#x27;点击盘面上没被压住的牌，它会飞进下方卡槽；卡槽里凑齐 3 张同花色
+自动消除。把盘面、卡槽、彩虹槽全部清空就算过关。&#x27;],
+  [&#x27;fa-table-columns&#x27;,&#x27;卡槽只有 7 格&#x27;,&#x27;卡槽塞满且没有任何三连时判负。这是唯一的失败方式（限时与
+限步关卡另算）。周常变体会把格子改成 5 格或 9 格。&#x27;],
+  [&#x27;fa-box-open&#x27;,&#x27;底部牌堆&#x27;,&#x27;盘面下方的牌堆只能取最前面一张；少数关卡的牌堆是双向的，两端都能取
+。&#x27;],
+  [&#x27;fa-clover&#x27;,&#x27;必定有解&#x27;,&#x27;每一局都是先算出一条合法的通关顺序，再沿着它铺花色和特殊牌 —— 有解是
+构造出来的，不是碰运气。卡在死局只会是取牌顺序的问题，失败页可以直接看参考解法回放。&#x27;]
+];
+
+const HELP_MODES=[
+  /* 章节数按 CHAPTERS.length 说：50 关 ÷ CH_SIZE(10) = 5 章，原来写的「四个章节」
+     与 CHAPTERS 里实际的五个章节对不上。宝箱关 isBonus 排除了前 12 关，第一章没有 */
+  [&#x27;fa-map&#x27;,&#x27;闯关&#x27;,&#x27;50 关，五个章节。每章第 10 关是 BOSS 关；第二章起每章第 5 关是宝箱关，金币翻
+倍、必掉图鉴。&#x27;],
+  [&#x27;fa-calendar-day&#x27;,&#x27;每日挑战&#x27;,&#x27;全服同一套题面，每天换一次。因为同题，成绩才有可比性。&#x27;],
+  [&#x27;fa-calendar-week&#x27;,&#x27;周常挑战&#x27;,&#x27;每周一换一套变体规则（窄槽、迷雾、爆破等），同一周内全服相同。
+&#x27;],
+  [&#x27;fa-infinity&#x27;,&#x27;无尽草原&#x27;,&#x27;一波清完接下一波，每波更难，中途可选增益。比的是累计消除组数。&#x27;]
+];
+</pre></div><div class="ft">第 13 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>const SHEEP=[
+  {id:&#x27;hat&#x27;,   n:&#x27;草帽羊&#x27;,   r:1, p:{t:&#x27;coin&#x27;,v:3},   c:[&#x27;#2E6B3E&#x27;,&#x27;#FFFFFF&#x27;,&#x27;#FBFDF7&#x27;,&#x27;#F6C445&#x27;
+,&#x27;#D3E8C6&#x27;], s:&#x27;第一只跟着你出门的羊，草帽是它自己叼来的。&#x27;},
+  {id:&#x27;moss&#x27;,  n:&#x27;苔藓羊&#x27;,   r:1, p:{t:&#x27;wool&#x27;,v:3},   c:[&#x27;#3D6B4A&#x27;,&#x27;#EFF6EC&#x27;,&#x27;#F8FCF6&#x27;,&#x27;#A8C98F&#x27;
+,&#x27;#CFE3C6&#x27;], s:&#x27;喜欢在背阴的石头上打盹，毛里总有青苔味。&#x27;},
+  {id:&#x27;cloud&#x27;, n:&#x27;云朵羊&#x27;,   r:1, p:{t:&#x27;coin&#x27;,v:3},   c:[&#x27;#5A7A8C&#x27;,&#x27;#FBFDFF&#x27;,&#x27;#FFFFFF&#x27;,&#x27;#BBD5E4&#x27;
+,&#x27;#D8E7F0&#x27;], s:&#x27;走路很轻，远看像一朵挪动的云。&#x27;},
+  {id:&#x27;wheat&#x27;, n:&#x27;麦穗羊&#x27;,   r:1, p:{t:&#x27;wool&#x27;,v:3},   c:[&#x27;#8A6B2A&#x27;,&#x27;#FFF9E8&#x27;,&#x27;#FFFDF4&#x27;,&#x27;#E8C878&#x27;
+,&#x27;#EDE0BE&#x27;], s:&#x27;秋天最忙，据说能背回半亩地的麦穗。&#x27;},
+  {id:&#x27;mint&#x27;,  n:&#x27;薄荷羊&#x27;,   r:1, p:{t:&#x27;coin&#x27;,v:4},   c:[&#x27;#3E8574&#x27;,&#x27;#F0FBF7&#x27;,&#x27;#F8FEFC&#x27;,&#x27;#9FD9C6&#x27;
+,&#x27;#CEEDE3&#x27;], s:&#x27;路过的地方都会留下一股清凉气。&#x27;},
+  {id:&#x27;clay&#x27;,  n:&#x27;陶土羊&#x27;,   r:1, p:{t:&#x27;wool&#x27;,v:4},   c:[&#x27;#8A5A3E&#x27;,&#x27;#FFF3EA&#x27;,&#x27;#FFFAF5&#x27;,&#x27;#DBA07A&#x27;
+,&#x27;#EBD3C2&#x27;], s:&#x27;在河滩长大，蹄子上永远沾着泥。&#x27;},
+  {id:&#x27;dew&#x27;,   n:&#x27;露珠羊&#x27;,   r:1, p:{t:&#x27;coin&#x27;,v:4},   c:[&#x27;#3C7E93&#x27;,&#x27;#F0FAFD&#x27;,&#x27;#F9FDFF&#x27;,&#x27;#9AD2E4&#x27;
+,&#x27;#CDE9F2&#x27;], s:&#x27;天没亮就出门，只为舔到最新鲜的那滴露水。&#x27;},
+  {id:&#x27;straw&#x27;, n:&#x27;干草羊&#x27;,   r:1, p:{t:&#x27;wool&#x27;,v:4},   c:[&#x27;#9A7B36&#x27;,&#x27;#FFFBEE&#x27;,&#x27;#FFFDF7&#x27;,&#x27;#E0C489&#x27;
+,&#x27;#EEE2C4&#x27;], s:&#x27;冬天的粮仓管理员，睡觉也抱着草垛。&#x27;},
+  {id:&#x27;fern&#x27;,  n:&#x27;蕨叶羊&#x27;,   r:1, p:{t:&#x27;coin&#x27;,v:4},   c:[&#x27;#2F6B4E&#x27;,&#x27;#EEF8F1&#x27;,&#x27;#F7FCF9&#x27;,&#x27;#8CC9A4&#x27;
+,&#x27;#C9E6D5&#x27;], s:&#x27;认得林子里每一株蕨，从不迷路。&#x27;},
+  {id:&#x27;stone&#x27;, n:&#x27;碎石羊&#x27;,   r:1, p:{t:&#x27;wool&#x27;,v:4},   c:[&#x27;#5E6670&#x27;,&#x27;#F5F6F8&#x27;,&#x27;#FBFBFC&#x27;,&#x27;#B6BEC8&#x27;
+,&#x27;#DCE0E6&#x27;], s:&#x27;沉默寡言，撞过的石头比走过的路多。&#x27;},
+  {id:&#x27;peach&#x27;, n:&#x27;蜜桃羊&#x27;,   r:1, p:{t:&#x27;coin&#x27;,v:5},   c:[&#x27;#A85A5A&#x27;,&#x27;#FFF2F2&#x27;,&#x27;#FFF9F9&#x27;,&#x27;#F0A9A9&#x27;
+,&#x27;#F3D6D6&#x27;], s:&#x27;夏天会偷偷去果园，回来时脸是红的。&#x27;},
+  {id:&#x27;lilac&#x27;, n:&#x27;紫丁羊&#x27;,   r:1, p:{t:&#x27;wool&#x27;,v:5},   c:[&#x27;#6E5A96&#x27;,&#x27;#F7F2FD&#x27;,&#x27;#FCFAFF&#x27;,&#x27;#C0A8E0&#x27;
+,&#x27;#DED2F0&#x27;], s:&#x27;黄昏时最好看，毛尖泛着淡淡的紫。&#x27;},
+  {id:&#x27;olive&#x27;, n:&#x27;橄榄羊&#x27;,   r:1, p:{t:&#x27;coin&#x27;,v:5},   c:[&#x27;#6B7B36&#x27;,&#x27;#F7FAEC&#x27;,&#x27;#FCFDF6&#x27;,&#x27;#BCCB84&#x27;
+,&#x27;#DDE6C2&#x27;], s:&#x27;不挑食，据说吃过牧场里所有能吃的东西。&#x27;},
+  {id:&#x27;coral&#x27;, n:&#x27;珊瑚羊&#x27;,   r:1, p:{t:&#x27;wool&#x27;,v:5},   c:[&#x27;#B06248&#x27;,&#x27;#FFF4F0&#x27;,&#x27;#FFFAF8&#x27;,&#x27;#F0AE94&#x27;
+,&#x27;#F5D9CE&#x27;], s:&#x27;从很远的海边走来，还记得潮水的声音。&#x27;},
+
+  {id:&#x27;scarf&#x27;, n:&#x27;围巾羊&#x27;,   r:2, p:{t:&#x27;combo&#x27;,v:600},  c:[&#x27;#2F6C8F&#x27;,&#x27;#F4FAFE&#x27;,&#x27;#FBFDFF&#x27;,&#x27;#EE9A8
+7&#x27;,&#x27;#CDE4F2&#x27;], s:&#x27;围巾是牧羊人织的，它一年四季都不肯摘。&#x27;},
+  {id:&#x27;snow&#x27;,  n:&#x27;初雪羊&#x27;,   r:2, p:{t:&#x27;combo&#x27;,v:600},  c:[&#x27;#5C7A96&#x27;,&#x27;#FFFFFF&#x27;,&#x27;#FBFDFF&#x27;,&#x27;#B9D4E
+8&#x27;,&#x27;#DCEAF4&#x27;], s:&#x27;落雪那天出生，从此不怕冷。&#x27;},
+  {id:&#x27;amber&#x27;, n:&#x27;琥珀羊&#x27;,   r:2, p:{t:&#x27;coin&#x27;,v:7},     c:[&#x27;#9A6516&#x27;,&#x27;#FFF6E4&#x27;,&#x27;#FFFCF2&#x27;,&#x27;#E8B34
+C&#x27;,&#x27;#F0DDB0&#x27;], s:&#x27;毛色像凝固的阳光，靠近会觉得暖。&#x27;},
+  {id:&#x27;ivy&#x27;,   n:&#x27;常春羊&#x27;,   r:2, p:{t:&#x27;wool&#x27;,v:7},     c:[&#x27;#2C6A3C&#x27;,&#x27;#EDF7EE&#x27;,&#x27;#F7FCF8&#x27;,&#x27;#82C08
+E&#x27;,&#x27;#C4E2CA&#x27;], s:&#x27;爬过最高的墙，也蹭掉过最多的毛。&#x27;},
+  {id:&#x27;thaw&#x27;,  n:&#x27;暖阳羊&#x27;,   r:2, p:{t:&#x27;thaw&#x27;,v:2},     c:[&#x27;#B07A1E&#x27;,&#x27;#FFF8E6&#x27;,&#x27;#FFFDF4&#x27;,&#x27;#F2C55
+C&#x27;,&#x27;#F2E3B8&#x27;], s:&#x27;走到哪儿，哪儿的冰就化了。&#x27;},
+  {id:&#x27;peek&#x27;,  n:&#x27;千里羊&#x27;,   r:2, p:{t:&#x27;peek&#x27;,v:2},     c:[&#x27;#456B9A&#x27;,&#x27;#F2F7FE&#x27;,&#x27;#FAFCFF&#x27;,&#x27;#A8C3E
+8&#x27;,&#x27;#D3E1F5&#x27;], s:&#x27;站在坡顶能看清三里外的草，眼神好得离谱。&#x27;},
+  {id:&#x27;lucky&#x27;, n:&#x27;四叶羊&#x27;,   r:2, p:{t:&#x27;drop&#x27;,v:30},    c:[&#x27;#3A8A50&#x27;,&#x27;#EFFAF1&#x27;,&#x27;#F8FDF9&#x27;,&#x27;#8FD3A
+2&#x27;,&#x27;#C8EAD2&#x27;], s:&#x27;总能踩到四叶草，连它自己都觉得奇怪。&#x27;},
+
+  {id:&#x27;star&#x27;,  n:&#x27;星月羊&#x27;,   r:3, p:{t:&#x27;luck&#x27;,v:1},     c:[&#x27;#4B3A78&#x27;,&#x27;#F5F1FD&#x27;,&#x27;#FCFAFF&#x27;,&#x27;#C9A6F
+0&#x27;,&#x27;#DED4F2&#x27;], s:&#x27;夜里会抬头很久，像在等谁。&#x27;},
+  {id:&#x27;aurora&#x27;,n:&#x27;极光羊&#x27;,   r:3, p:{t:&#x27;coin&#x27;,v:10},    c:[&#x27;#2F7A86&#x27;,&#x27;#EEFBFB&#x27;,&#x27;#F8FEFE&#x27;,&#x27;#7ED8D
+8&#x27;,&#x27;#C2ECEC&#x27;], s:&#x27;极夜里见过天上的光，回来后毛就变了颜色。&#x27;},
+  {id:&#x27;golden&#x27;,n:&#x27;鎏金羊&#x27;,   r:3, p:{t:&#x27;wool&#x27;,v:10},    c:[&#x27;#8A6A12&#x27;,&#x27;#FFFAE6&#x27;,&#x27;#FFFDF3&#x27;,&#x27;#F2CE5
+5&#x27;,&#x27;#F0E2B4&#x27;], s:&#x27;传说中被阳光亲吻过的羊，很少有人真的见过。&#x27;}
+];
+
+const RARITY=[&#x27;&#x27;,&#x27;普通&#x27;,&#x27;稀有&#x27;,&#x27;传说&#x27;];
+
+const PASSIVE_TXT={
+  coin:v=&gt;&#x27;金币产出 +&#x27;+v+&#x27;%&#x27;,
+  wool:v=&gt;&#x27;羊毛产出 +&#x27;+v+&#x27;%&#x27;,
+  combo:v=&gt;&#x27;连击窗口 +&#x27;+(v/1000).toFixed(1)+&#x27; 秒&#x27;,
+  thaw:v=&gt;&#x27;开局自动解冻 &#x27;+v+&#x27; 张冰冻牌&#x27;,</pre></div><div class="ft">第 14 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>  peek:v=&gt;&#x27;开局自动翻开 &#x27;+v+&#x27; 张谜之牌&#x27;,
+  drop:v=&gt;&#x27;图鉴掉落率 +&#x27;+v+&#x27;%&#x27;,
+  luck:v=&gt;&#x27;通关必定掉落一只羊&#x27;
+};
+
+const SHARD_NEED=[0,3,8];
+
+const SHARD_MAX=8;
+
+const PITY_N=12;
+
+const EXCHANGE={1:6, 2:12, 3:25};
+
+const FARM=[
+  {id:&#x27;grass&#x27;, n:&#x27;青草地&#x27;, ico:&#x27;fa-seedling&#x27;, max:5, cost:l=&gt;60+l*40,  desc:l=&gt;&#x27;金币产出 +&#x27;+(l*2
+)+&#x27;%&#x27;},
+  {id:&#x27;mill&#x27;,  n:&#x27;风车&#x27;,   ico:&#x27;fa-fan&#x27;,       max:5, cost:l=&gt;80+l*50,  desc:l=&gt;&#x27;羊毛产出 +&#x27;+(l*
+2)+&#x27;%&#x27;},
+  {id:&#x27;fence&#x27;, n:&#x27;围栏&#x27;,   ico:&#x27;fa-border-all&#x27;,max:5, cost:l=&gt;70+l*45,  desc:l=&gt;&#x27;商店道具便宜 &#x27;+
+(l*3)+&#x27;%&#x27;},
+  {id:&#x27;pen&#x27;,   n:&#x27;羊圈&#x27;,   ico:&#x27;fa-house-chimney&#x27;, max:5, cost:l=&gt;90+l*60, desc:l=&gt;&#x27;图鉴掉落率 +
+&#x27;+(l*4)+&#x27;%&#x27;}
+];
+
+const TOOL_UP={
+  shuffle:{n:&#x27;洗牌&#x27;,ico:&#x27;fa-shuffle&#x27;,   cost:[0,120,260], desc:[&#x27;有解洗牌&#x27;,&#x27;有解洗牌 · 局面更宽
+松&#x27;,&#x27;有解洗牌 · 洗成最宽松局面&#x27;]},
+  undo:   {n:&#x27;撤回&#x27;,ico:&#x27;fa-rotate-left&#x27;,cost:[0,100,220], desc:[&#x27;撤回 1 步&#x27;,&#x27;连续撤回 2 步&#x27;,&#x27;连
+续撤回 3 步&#x27;]},
+  out:    {n:&#x27;移出&#x27;,ico:&#x27;fa-arrow-right-from-bracket&#x27;,cost:[0,140,300], desc:[&#x27;移出 3 张&#x27;,&#x27;移出 
+4 张&#x27;,&#x27;移出 5 张&#x27;]}
+};
+
+const ACH=[
+  [&#x27;first&#x27;,&#x27;初次放羊&#x27;,&#x27;通关第 1 关&#x27;,s=&gt;s.cleared&gt;=1,20],
+  [&#x27;c5&#x27;,&#x27;小有所成&#x27;,&#x27;累计通关 5 关&#x27;,s=&gt;s.cleared&gt;=5,20],
+  [&#x27;c15&#x27;,&#x27;熟能生巧&#x27;,&#x27;累计通关 15 关&#x27;,s=&gt;s.cleared&gt;=15,30],
+  [&#x27;c40&#x27;,&#x27;牧场老手&#x27;,&#x27;累计通关 40 关&#x27;,s=&gt;s.cleared&gt;=40,50],
+  [&#x27;c80&#x27;,&#x27;草原传说&#x27;,&#x27;累计通关 80 关&#x27;,s=&gt;s.cleared&gt;=80,80],
+  [&#x27;lv5&#x27;,&#x27;越走越远&#x27;,&#x27;解锁到第 5 关&#x27;,s=&gt;s.level&gt;=5,20],
+  [&#x27;lv12&#x27;,&#x27;出了新手村&#x27;,&#x27;解锁到第 12 关&#x27;,s=&gt;s.level&gt;=12,30],
+  [&#x27;lv21&#x27;,&#x27;翻过雪线&#x27;,&#x27;解锁到第 21 关&#x27;,s=&gt;s.level&gt;=21,50],
+  [&#x27;lv31&#x27;,&#x27;走到星夜&#x27;,&#x27;解锁到第 31 关&#x27;,s=&gt;s.level&gt;=31,80],
+  [&#x27;st10&#x27;,&#x27;攒星星&#x27;,&#x27;累计 10 颗星&#x27;,s=&gt;starTotal()&gt;=10,20],
+  [&#x27;st30&#x27;,&#x27;三十而立&#x27;,&#x27;累计 30 颗星&#x27;,s=&gt;starTotal()&gt;=30,40],
+  [&#x27;st60&#x27;,&#x27;星光满地&#x27;,&#x27;累计 60 颗星&#x27;,s=&gt;starTotal()&gt;=60,70],
+  [&#x27;st99&#x27;,&#x27;星河灿烂&#x27;,&#x27;累计 99 颗星&#x27;,s=&gt;starTotal()&gt;=99,120],
+  [&#x27;perfect&#x27;,&#x27;一尘不染&#x27;,&#x27;有 1 关拿到三星&#x27;,s=&gt;Object.values(s.stars||{}).some(v=&gt;v&gt;=3),25],
+  [&#x27;perfect5&#x27;,&#x27;五星连珠&#x27;,&#x27;有 5 关拿到三星&#x27;,s=&gt;Object.values(s.stars||{}).filter(v=&gt;v&gt;=3).length&gt;
+=5,45],
+  [&#x27;perfect15&#x27;,&#x27;完美主义&#x27;,&#x27;有 15 关拿到三星&#x27;,s=&gt;Object.values(s.stars||{}).filter(v=&gt;v&gt;=3).lengt
+h&gt;=15,90],
+  [&#x27;combo5&#x27;,&#x27;小连击&#x27;,&#x27;单局连击达到 5&#x27;,s=&gt;(s.st.bestCombo||0)&gt;=5,20],
+  [&#x27;combo10&#x27;,&#x27;连击好手&#x27;,&#x27;单局连击达到 10&#x27;,s=&gt;(s.st.bestCombo||0)&gt;=10,35],
+  [&#x27;combo20&#x27;,&#x27;连击大师&#x27;,&#x27;单局连击达到 20&#x27;,s=&gt;(s.st.bestCombo||0)&gt;=20,70],
+  [&#x27;m100&#x27;,&#x27;消了一百组&#x27;,&#x27;累计消除 100 组&#x27;,s=&gt;(s.st.matches||0)&gt;=100,20],
+  [&#x27;m500&#x27;,&#x27;消了五百组&#x27;,&#x27;累计消除 500 组&#x27;,s=&gt;(s.st.matches||0)&gt;=500,40],
+  [&#x27;m2000&#x27;,&#x27;消除机器&#x27;,&#x27;累计消除 2000 组&#x27;,s=&gt;(s.st.matches||0)&gt;=2000,90],
+  [&#x27;boss1&#x27;,&#x27;初见 Boss&#x27;,&#x27;通关 1 个 Boss 关&#x27;,s=&gt;(s.st.boss||0)&gt;=1,40],
+  [&#x27;boss3&#x27;,&#x27;Boss 克星&#x27;,&#x27;通关 3 个 Boss 关&#x27;,s=&gt;(s.st.boss||0)&gt;=3,80],</pre></div><div class="ft">第 15 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>  [&#x27;notool&#x27;,&#x27;徒手过关&#x27;,&#x27;不用任何道具通关 1 次&#x27;,s=&gt;(s.st.noTool||0)&gt;=1,25],
+  [&#x27;notool10&#x27;,&#x27;老手风范&#x27;,&#x27;不用道具通关 10 次&#x27;,s=&gt;(s.st.noTool||0)&gt;=10,60],
+  [&#x27;daily1&#x27;,&#x27;今日打卡&#x27;,&#x27;完成 1 次每日挑战&#x27;,s=&gt;(s.st.daily||0)&gt;=1,25],
+  [&#x27;daily7&#x27;,&#x27;坚持一周&#x27;,&#x27;完成 7 次每日挑战&#x27;,s=&gt;(s.st.daily||0)&gt;=7,70],
+  [&#x27;endless20&#x27;,&#x27;无尽入门&#x27;,&#x27;无尽模式消 20 组&#x27;,s=&gt;(s.endless||0)&gt;=20,25],
+  [&#x27;endless60&#x27;,&#x27;无尽好手&#x27;,&#x27;无尽模式消 60 组&#x27;,s=&gt;(s.endless||0)&gt;=60,60],
+  [&#x27;dex5&#x27;,&#x27;小小收藏家&#x27;,&#x27;收集 5 只羊&#x27;,s=&gt;Object.keys(s.dex||{}).length&gt;=5,30],
+  [&#x27;dex12&#x27;,&#x27;半个图鉴&#x27;,&#x27;收集 12 只羊&#x27;,s=&gt;Object.keys(s.dex||{}).length&gt;=12,60],
+  [&#x27;dex24&#x27;,&#x27;图鉴全满&#x27;,&#x27;收集全部 24 只羊&#x27;,s=&gt;Object.keys(s.dex||{}).length&gt;=24,150],
+  [&#x27;sr&#x27;,&#x27;传说降临&#x27;,&#x27;收集到 1 只传说羊&#x27;,s=&gt;Object.keys(s.dex||{}).some(id=&gt;SHEEP_BY[id]&amp;&amp;SHEEP_BY
+[id].r===3),80],
+  [&#x27;farm5&#x27;,&#x27;初具规模&#x27;,&#x27;牧场建设累计 5 级&#x27;,s=&gt;Object.values(s.farm||{}).reduce((a,b)=&gt;a+b,0)&gt;=5,4
+0],
+  [&#x27;farm20&#x27;,&#x27;牧场主&#x27;,&#x27;牧场全部建满&#x27;,s=&gt;Object.values(s.farm||{}).reduce((a,b)=&gt;a+b,0)&gt;=20,120]
+];
+
+const TITLES=[
+  [&#x27;&#x27;,        &#x27;牧羊新手&#x27;,   ()=&gt;true],
+  [&#x27;c15&#x27;,     &#x27;熟练牧人&#x27;,   null],
+  [&#x27;c40&#x27;,     &#x27;牧场老手&#x27;,   null],
+  [&#x27;c80&#x27;,     &#x27;草原传说&#x27;,   null],
+  [&#x27;perfect15&#x27;,&#x27;完美主义者&#x27;, null],
+  [&#x27;combo20&#x27;, &#x27;连击大师&#x27;,   null],
+  [&#x27;boss3&#x27;,   &#x27;Boss 克星&#x27;,  null],
+  [&#x27;daily7&#x27;,  &#x27;风雨无阻&#x27;,   null],
+  [&#x27;dex24&#x27;,   &#x27;图鉴收藏家&#x27;, null],
+  [&#x27;sr&#x27;,      &#x27;传说饲主&#x27;,   null],
+  [&#x27;farm20&#x27;,  &#x27;牧场主&#x27;,     null],
+  [&#x27;st99&#x27;,    &#x27;星河灿烂&#x27;,   null]
+];
+
+const TASKS=[
+  {id:&#x27;match&#x27;, stat:&#x27;matches&#x27;, goals:[20,30,45], txt:g=&gt;&#x27;累计消除 &#x27;+g+&#x27; 组&#x27;,      coin:70,  wool
+:14},
+  {id:&#x27;clear&#x27;, stat:&#x27;clears&#x27;,  goals:[1,2,3],    txt:g=&gt;&#x27;通关 &#x27;+g+&#x27; 关&#x27;,           coin:90,  woo
+l:18},
+  {id:&#x27;combo&#x27;, stat:&#x27;combo&#x27;,   goals:[4,5,6],    txt:g=&gt;&#x27;单局达成 &#x27;+g+&#x27; 连击&#x27;,     coin:80,  woo
+l:16, max:true},
+  {id:&#x27;play&#x27;,  stat:&#x27;plays&#x27;,   goals:[3,5,7],    txt:g=&gt;&#x27;开局 &#x27;+g+&#x27; 次&#x27;,           coin:55,  woo
+l:11},
+  {id:&#x27;spec&#x27;,  stat:&#x27;spec&#x27;,    goals:[6,10,15],  txt:g=&gt;&#x27;消掉 &#x27;+g+&#x27; 张特殊牌&#x27;,     coin:85,  woo
+l:17},
+  {id:&#x27;daily&#x27;, stat:&#x27;dailyRun&#x27;,goals:[1],        txt:()=&gt;&#x27;完成一次每日挑战&#x27;,        coin:110, wo
+ol:22}
+];
+
+const BUFFS=[
+  {id:&#x27;slot&#x27;,  ico:&#x27;fa-table-columns&#x27;, n:&#x27;多一格卡槽&#x27;, d:&#x27;接下来每一波都多一个格子，效果会叠加&#x27;}
+,
+  {id:&#x27;color&#x27;, ico:&#x27;fa-palette&#x27;,       n:&#x27;少一种花色&#x27;, d:&#x27;下一波开始花色少一种，配对更容易&#x27;},
+  {id:&#x27;small&#x27;, ico:&#x27;fa-compress&#x27;,      n:&#x27;盘面缩小&#x27;,   d:&#x27;下一波少 12 张牌，跑得更快&#x27;},
+  {id:&#x27;tool&#x27;,  ico:&#x27;fa-toolbox&#x27;,       n:&#x27;补给两件&#x27;,   d:&#x27;立刻获得 2 个随机道具&#x27;},
+  {id:&#x27;combo&#x27;, ico:&#x27;fa-fire&#x27;,          n:&#x27;连击更宽松&#x27;, d:&#x27;连击窗口延长 1.5 秒，更容易连起来&#x27;}
+];
+
+var CORE = {
+  G: G,
+  SLOT_N: SLOT_N,
+  BASE_SLOT: BASE_SLOT,
+  GRID: GRID,</pre></div><div class="ft">第 16 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>  TYPE_DEFS: TYPE_DEFS,
+  CH_SIZE: CH_SIZE,
+  CHAPTERS: CHAPTERS,
+  SHAPES: SHAPES,
+  GOALS: GOALS,
+  SPECIALS: SPECIALS,
+  REWARD_SP: REWARD_SP,
+  LEVELS: LEVELS,
+  MAX_LEVEL: MAX_LEVEL,
+  WEEKLY: WEEKLY,
+  COMBO_WINDOW: COMBO_WINDOW,
+  BUFFS: BUFFS,
+  mulberry32: mulberry32,
+  seedRNG: seedRNG,
+  rnd: rnd,
+  shuffle: shuffle,
+  chapterIdx: chapterIdx,
+  chapterOf: chapterOf,
+  chapterTitle: chapterTitle,
+  levelName: levelName,
+  isBoss: isBoss,
+  isBonus: isBonus,
+  shapeOf: shapeOf,
+  rawLevelDef: rawLevelDef,
+  levelDef: levelDef,
+  goalOf: goalOf,
+  makeGoal: makeGoal,
+  mkTile: mkTile,
+  overlap: overlap,
+  freeIn: freeIn,
+  tileNb: tileNb,
+  neighbors: neighbors,
+  planColors: planColors,
+  spMix: spMix,
+  waveLevel: waveLevel,
+  solveOrder: solveOrder,
+  solveOrderLocked: solveOrderLocked,
+  canonicalStats: canonicalStats,
+  genLevel: genLevel,
+  makeCode: makeCode,
+  parseCode: parseCode,
+  weekIndex: weekIndex,
+  weeklyMod: weeklyMod,
+  dailySeed: dailySeed,
+  reshuffleSolvable: reshuffleSolvable,
+  paintOrder: paintOrder,
+  applySpecials: applySpecials,
+  SHEEP: SHEEP,
+  RARITY: RARITY,
+  PASSIVE_TXT: PASSIVE_TXT,
+  SHARD_NEED: SHARD_NEED,
+  SHARD_MAX: SHARD_MAX,
+  PITY_N: PITY_N,
+  EXCHANGE: EXCHANGE,
+  TOOL_UP: TOOL_UP,
+  PRICE: PRICE,
+  TOOL_KEYS: TOOL_KEYS,
+  FARM: FARM,
+  ACH: ACH,
+  TITLES: TITLES,</pre></div><div class="ft">第 17 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>  CK_COIN: CK_COIN,
+  TASKS: TASKS,
+  HELP_BASE: HELP_BASE,
+  HELP_MODES: HELP_MODES,
+  SAYINGS: SAYINGS
+};
+if (typeof module !== &#x27;undefined&#x27; &amp;&amp; module.exports) module.exports = CORE;
+else if (typeof globalThis !== &#x27;undefined&#x27;) globalThis.CORE = CORE;
+
+
+/* ===== 微信小游戏版 minigame/js/scene_game.js ===== */
+/* 牌局场景。
+   规则判定（遮挡、牌堆、冰冻解冻、锁链/补给、炸弹倒数、彩虹独立槽、卡槽上限）
+   逐条照网页版搬过来，只是把 DOM 换成 canvas 绘制。 */
+(function () {
+  var CORE = (typeof require !== &#x27;undefined&#x27;) ? require(&#x27;./core.js&#x27;) : globalThis.CORE;
+  var UI = (typeof require !== &#x27;undefined&#x27;) ? require(&#x27;./ui.js&#x27;) : globalThis.UI;
+  var SAVE = (typeof require !== &#x27;undefined&#x27;) ? require(&#x27;./save.js&#x27;) : globalThis.SAVE;
+  var SFX = (typeof require !== &#x27;undefined&#x27;) ? require(&#x27;./sfx.js&#x27;) : globalThis.SFX;
+  var C = UI.C;
+
+  var ANIM = 260;          // 入槽飞行时间(ms)
+  var CLEAR = 300;         // 三连消除停留(ms)
+
+  function GameScene(lv, seed, mode) {
+    this.lv = lv;
+    this.seed = seed;
+    this.mode = mode || &#x27;normal&#x27;;
+    this.stage = null;
+  }
+
+  GameScene.prototype.enter = function (stage) {
+    this.stage = stage;
+    this.reset();
+  };
+
+  GameScene.prototype.reset = function () {
+    CORE.G.mode = this.mode;
+    CORE.G.wave = this.wave || 1;
+    CORE.G.buffs = this.buffs || null;
+    CORE.G.lv = this.lv;
+    CORE.G.toolLv = SAVE.d.toolLv;
+    // 每日/周常用固定种子，全服同题
+    if (this.mode === &#x27;daily&#x27;) this.seed = CORE.dailySeed();
+    else if (this.mode === &#x27;weekly&#x27;) this.seed = CORE.weekIndex() * 7919;
+    else if (this.seed == null) this.seed = (Math.random() * 16777216) | 0;
+    CORE.seedRNG(this.seed);
+    var gen = CORE.genLevel(this.lv);
+    this.tiles = gen.tiles;
+    this.queues = gen.queues;
+    this.order = gen.order;
+    this.def = CORE.levelDef(this.lv);
+    this.slotN = this.def.cfg.slots || CORE.BASE_SLOT;
+    this.tray = [];
+    this.rain = [];
+    this.matches = 0;
+    this.total = this.tiles.length;
+    this.over = 0;           // 0 进行中 1 胜 -1 负
+    this.combo = 0;
+    this.maxCombo = 0;</pre></div><div class="ft">第 18 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>    this.lastMatch = 0;
+    this.startAt = Date.now();
+    this.flying = [];        // {t, x0,y0,x1,y1, t0}
+    this.clearing = null;    // {trio, t0}
+    this.history = [];       // 撤回用
+    this.toolUsed = 0;
+    this.goal = gen.goal || (CORE.G.goal = null);
+    this.limit = (this.mode === &#x27;daily&#x27; || this.mode === &#x27;weekly&#x27; || CORE.isBoss(this.lv)) ? 150
+ : 0;
+    // 洗牌要用本局真实配置，直接查 levelDef 会在每日/周常里回落到第 1 关
+    CORE.G.rcfg = { types: this.def.cfg.types, d: this.def.cfg.d };
+    this.syncCore();
+    this.layout();
+  };
+
+  /* 有解洗牌读的是 CORE.G，调用前必须同步 */
+  GameScene.prototype.syncCore = function () {
+    CORE.G.tiles = this.tiles;
+    CORE.G.queues = this.queues;
+    CORE.G.tray = this.tray;
+    CORE.G.rain = this.rain;
+    CORE.G.matches = this.matches;
+    CORE.G.lv = this.lv;
+    CORE.G.goal = this.goal;
+    CORE.G.toolLv = SAVE.d.toolLv;
+  };
+
+  /* --- 三个道具 --- */
+  GameScene.prototype.useShuffle = function () {
+    if (this.over) return;
+    var S = SAVE.d;
+    if (!S.tools.shuffle) { this.stage.toast(&#x27;洗牌用完了，去商店补一点&#x27;); SFX.deny(); return; }
+    this.syncCore();
+    var r = CORE.reshuffleSolvable();
+    if (r !== &#x27;ok&#x27;) {
+      // 洗不出有解排布就如实告诉玩家，并且不扣道具
+      this.stage.toast(r === &#x27;empty&#x27; ? &#x27;牌太少了，洗不动&#x27; : &#x27;这个局面洗不出有解排布，没有扣道具&#x27;
+);
+      SFX.deny();
+      return;
+    }
+    S.tools.shuffle--; SAVE.save();
+    this.toolUsed++;
+    this.stage.toast(&#x27;已重新洗牌 · 保证仍有解&#x27;);
+    SFX.coin();
+  };
+  GameScene.prototype.useUndo = function () {
+    if (this.over) return;
+    var S = SAVE.d;
+    if (!S.tools.undo) { this.stage.toast(&#x27;撤回用完了&#x27;); SFX.deny(); return; }
+    var n = S.toolLv.undo || 1, done = 0;
+    for (var i = 0; i &lt; n; i++) {
+      // 只能撤回还留在槽里的牌。history 里也有已经消掉的，
+      // 照单全收会把消掉的牌复活回盘面，那是比撤不动更糟的错
+      var t = null;
+      while (this.history.length) {
+        var cand = this.history[this.history.length - 1];
+        this.history.pop();
+        if (this.tray.indexOf(cand) &gt;= 0 || this.rain.indexOf(cand) &gt;= 0) { t = cand; break; }
+      }</pre></div><div class="ft">第 19 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>      if (!t) break;
+      var idx = this.tray.indexOf(t);
+      if (idx &lt; 0) { var ri = this.rain.indexOf(t); if (ri &gt;= 0) this.rain.splice(ri, 1); }
+      else this.tray.splice(idx, 1);
+      t.removed = false;
+      if (t.sp === &#x27;bomb&#x27;) t.bombLeft = t.bombK;   // 退回盘面，倒数重置
+      done++;
+    }
+    if (!done) { this.stage.toast(&#x27;还没有可撤回的操作&#x27;); SFX.deny(); return; }
+    S.tools.undo--; SAVE.save();
+    this.toolUsed++;
+    this.stage.toast(&#x27;已撤回 &#x27; + done + &#x27; 步&#x27;);
+  };
+  GameScene.prototype.useOut = function () {
+    if (this.over) return;
+    var S = SAVE.d;
+    if (!S.tools.out) { this.stage.toast(&#x27;移出用完了&#x27;); SFX.deny(); return; }
+    var n = 2 + (S.toolLv.out || 1);
+    var list = this.tray.filter(function (t) { return true; }).slice(0, n);
+    if (!list.length) { this.stage.toast(&#x27;卡槽是空的&#x27;); SFX.deny(); return; }
+    var self = this;
+    list.forEach(function (t) {
+      self.tray.splice(self.tray.indexOf(t), 1);
+      t.removed = false;
+      if (t.sp === &#x27;bomb&#x27;) t.bombLeft = t.bombK;
+      var h = self.history.indexOf(t); if (h &gt;= 0) self.history.splice(h, 1);
+    });
+    S.tools.out--; SAVE.save();
+    this.toolUsed++;
+    this.stage.toast(&#x27;已移出 &#x27; + list.length + &#x27; 块&#x27;);
+  };
+
+  /* --- 几何：与网页版 computeT 同一套算法 --- */
+  GameScene.prototype.layout = function () {
+    var P = this.stage.plat;
+    var boardTop = 108;
+    var boardH = P.H - boardTop - 250;
+    var W = P.W - 24;
+    var rows = this.queues.length;
+    var maxLen = 0;
+    for (var i = 0; i &lt; this.queues.length; i++) maxLen = Math.max(maxLen, this.queues[i].length
+);
+    var T = Math.min(W / 7, (boardH - rows * 6 - 8) / (7 + rows * 1.12));
+    if (maxLen &gt; 1) T = Math.min(T, W / (1 + 0.30 * (maxLen - 1)));
+    T = Math.max(26, Math.floor(T));
+    this.T = T;
+    this.boardX = (P.W - 7 * T) / 2;
+    this.boardY = boardTop;
+    this.qStep = T * 0.30;
+    this.qY = boardTop + 7 * T + 10;
+    this.slotY = P.H - 150;
+    this.rainY = P.H - 200;
+  };
+
+  GameScene.prototype.tileRect = function (t) {
+    var T = this.T;
+    if (t.q &gt;= 0) {
+      var q = this.queues[t.q];
+      var w = T + this.qStep * (q.length - 1);
+      return { x: (this.stage.plat.W - w) / 2 + t.qp * this.qStep, y: this.qY + t.q * (T + 6), w</pre></div><div class="ft">第 20 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>: T, h: T };
+    }
+    return { x: this.boardX + t.x * T / 2, y: this.boardY + t.y * T / 2, w: T, h: T };
+  };
+
+  /* --- 规则判定（照搬网页版） --- */
+  GameScene.prototype.isCovered = function (t) {
+    if (t.q &gt;= 0) {
+      var q = this.queues[t.q], smaller = false, larger = false;
+      for (var i = 0; i &lt; q.length; i++) {
+        var o = q[i];
+        if (o.removed || o === t) continue;
+        if (o.qp &lt; t.qp) smaller = true; else larger = true;
+      }
+      return t.biq ? (smaller &amp;&amp; larger) : smaller;
+    }
+    for (var j = 0; j &lt; this.tiles.length; j++) {
+      var b = this.tiles[j];
+      if (!b.removed &amp;&amp; b.q &lt; 0 &amp;&amp; b.layer &gt; t.layer &amp;&amp; CORE.overlap(b, t)) return true;
+    }
+    return false;
+  };
+  GameScene.prototype.lockedBy = function (t) {
+    if (t.sp === &#x27;freeze&#x27; &amp;&amp; t.frozen) return &#x27;freeze&#x27;;
+    if (t.sp === &#x27;chain&#x27; &amp;&amp; this.matches &lt; t.chainN) return &#x27;chain&#x27;;
+    if (t.sp === &#x27;supply&#x27; &amp;&amp; this.matches &lt; t.chainN) return &#x27;supply&#x27;;
+    return null;
+  };
+  GameScene.prototype.thawAround = function (t) {
+    if (t.q &gt;= 0) return;
+    var self = this;
+    this.tiles.forEach(function (o) {
+      if (o.removed || o.sp !== &#x27;freeze&#x27; || !o.frozen || o.layer !== t.layer) return;
+      if ((Math.abs(o.x - t.x) === 2 &amp;&amp; o.y === t.y) || (Math.abs(o.y - t.y) === 2 &amp;&amp; o.x === t.
+x)) o.frozen = false;
+    });
+  };
+
+  /* --- 点击一张牌 --- */
+  GameScene.prototype.tap = function (t) {
+    if (this.over || this.clearing) return;
+    if (t.removed || this.isCovered(t)) return;
+    var lk = this.lockedBy(t);
+    if (lk) {
+      this.stage.toast(lk === &#x27;freeze&#x27; ? &#x27;这张牌被冰封了，先消掉它旁边的牌&#x27;
+        : &#x27;还没解锁，再多消几组&#x27;);
+      return;
+    }
+    if (t.sp === &#x27;dbl&#x27; &amp;&amp; t.shell) {          // 双层牌：第一下只拆壳
+      t.shell = false;
+      return;
+    }
+    if (t.sp === &#x27;rain&#x27;) {
+      if (this.rain.length &gt;= 3) return;
+      t.removed = true;
+      this.rain.push(t);
+      this.history.push(t);
+      SFX.pick();
+      this.thawAround(t);
+      if (this.rain.length === 3) { this.rain.length = 0; this.registerMatch(); }</pre></div><div class="ft">第 21 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>      this.checkEnd();
+      return;
+    }
+    if (this.tray.length &gt;= this.slotN) return;
+
+    t.removed = true;
+    this.tray.push(t);
+    this.history.push(t);
+    SFX.pick();
+    this.thawAround(t);
+    if (t.sp === &#x27;bomb&#x27;) t.bombLeft = t.bombK;
+
+    var r = this.tileRect(t);
+    var slot = this.slotRect(this.tray.length - 1);
+    this.flying.push({ t: t, x0: r.x, y0: r.y, x1: slot.x, y1: slot.y, t0: Date.now() });
+
+    // 炸弹倒数：每有一张牌入槽，槽里其它炸弹减 1
+    for (var i = 0; i &lt; this.tray.length; i++) {
+      var x = this.tray[i];
+      if (x === t || x.sp !== &#x27;bomb&#x27;) continue;
+      x.bombLeft--;
+      if (x.bombLeft &lt;= 0) { this.lose(&#x27;bomb&#x27;); return; }
+    }
+
+    var same = this.tray.filter(function (o) { return o.type === t.type; });
+    if (same.length &gt;= 3) {
+      this.clearing = { trio: same.slice(0, 3), t0: Date.now() };
+    } else {
+      this.checkEnd();
+    }
+  };
+
+  GameScene.prototype.registerMatch = function () {
+    var now = Date.now();
+    this.combo = (now - this.lastMatch &lt; CORE.COMBO_WINDOW) ? this.combo + 1 : 1;
+    this.lastMatch = now;
+    this.maxCombo = Math.max(this.maxCombo, this.combo);
+    this.matches++;
+    CORE.G.matches = this.matches;      // 锁链/补给要看这个数
+    SFX.match(this.combo);
+  };
+
+  GameScene.prototype.win = function () {
+    if (this.over) return;
+    this.over = 1;
+    SFX.win();
+    var secs = Math.round((Date.now() - this.startAt) / 1000);
+    if (this.mode === &#x27;normal&#x27;) {
+      this.reward = SAVE.winLevel(this.lv, secs, this.maxCombo, this.matches, this.toolUsed === 
+0);
+      this.newAch = SAVE.achDone();
+    } else if (this.mode === &#x27;daily&#x27; || this.mode === &#x27;weekly&#x27;) {
+      var store = this.mode === &#x27;weekly&#x27; ? SAVE.d.weekly : SAVE.d.daily;
+      var key = String(this.mode === &#x27;weekly&#x27; ? CORE.weekIndex() : CORE.dailySeed());
+      var prev = store[key];
+      store[key] = {
+        time: (!prev || secs * 1000 &lt; prev.time) ? secs * 1000 : prev.time,
+        combo: Math.max((prev &amp;&amp; prev.combo) || 0, this.maxCombo), done: 1
+      };
+      SAVE.d.coins += 120;</pre></div><div class="ft">第 22 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>      SAVE.save();
+      this.reward = { coin: 120, wool: 0, stars: 3 };
+    }
+  };
+  GameScene.prototype.lose = function (why) {
+    if (this.over) return;
+    this.over = -1;
+    this.deathBy = why;
+    SFX.fail();
+    if (this.mode === &#x27;endless&#x27;) {
+      var total = (this.score || 0) + this.matches;
+      if (total &gt; SAVE.d.endless) SAVE.d.endless = total;
+      SAVE.d.endlessLog.unshift({ score: total, wave: this.wave || 1, t: &#x27;&#x27; });
+      SAVE.d.endlessLog = SAVE.d.endlessLog.slice(0, 10);
+      SAVE.d.coins += total * 2;
+      SAVE.save();
+    }
+  };
+
+  GameScene.prototype.checkEnd = function () {
+    var left = 0;
+    for (var i = 0; i &lt; this.tiles.length; i++) if (!this.tiles[i].removed) left++;
+    if (!left &amp;&amp; !this.tray.length &amp;&amp; !this.rain.length) {
+      if (this.mode === &#x27;endless&#x27;) { this.nextWave(); return; }
+      this.win();
+      return;
+    }
+    if (this.tray.length &gt;= this.slotN) {
+      // 卡槽满且没有任何两张同色 → 死局
+      var cnt = {};
+      for (var j = 0; j &lt; this.tray.length; j++) cnt[this.tray[j].type] = (cnt[this.tray[j].type
+] || 0) + 1;
+      var can = false;
+      for (var k in cnt) if (cnt[k] &gt;= 2) can = true;
+      if (!can) this.lose(&#x27;full&#x27;);
+    }
+  };
+
+  /* 无尽：清完一波接下一波，卡槽此刻必空，串联是安全的 */
+  GameScene.prototype.nextWave = function () {
+    this.score = (this.score || 0) + this.matches;
+    this.wave = (this.wave || 1) + 1;
+    this.seed = (Math.random() * 16777216) | 0;
+    this.stage.toast(&#x27;第 &#x27; + this.wave + &#x27; 波&#x27;);
+    this.reset();
+  };
+
+  GameScene.prototype.update = function (now) {
+    var i;
+    if (this.limit &amp;&amp; !this.over) {
+      var left = this.limit - Math.floor((now - this.startAt) / 1000);
+      if (left &lt;= 0) this.lose(&#x27;time&#x27;);
+    }
+    for (i = this.flying.length - 1; i &gt;= 0; i--) {
+      if (now - this.flying[i].t0 &gt; ANIM) this.flying.splice(i, 1);
+    }
+    if (this.clearing &amp;&amp; now - this.clearing.t0 &gt; CLEAR) {
+      var trio = this.clearing.trio, self = this;
+      trio.forEach(function (x) {
+        var idx = self.tray.indexOf(x);</pre></div><div class="ft">第 23 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>        if (idx &gt;= 0) self.tray.splice(idx, 1);
+      });
+      this.clearing = null;
+      this.registerMatch();
+      this.checkEnd();
+    }
+  };
+
+  /* --- 绘制 --- */
+  GameScene.prototype.slotRect = function (i) {
+    var P = this.stage.plat;
+    var n = this.slotN, gap = 4;
+    var w = Math.min(40, (P.W - 36 - gap * (n - 1)) / n);
+    var total = w * n + gap * (n - 1);
+    return { x: (P.W - total) / 2 + i * (w + gap), y: this.slotY, w: w, h: w * 1.12 };
+  };
+
+  GameScene.prototype.drawTile = function (ctx, t, x, y, w, covered) {
+    var r = w * 0.18;
+    UI.fillRound(ctx, x, y, w, w, r, covered ? &#x27;#EEF4EA&#x27; : C.paper);
+    UI.strokeRound(ctx, x, y, w, w, r, covered ? &#x27;#DCE7D2&#x27; : C.line, 2);
+    var def = CORE.TYPE_DEFS[t.type % CORE.TYPE_DEFS.length];
+    ctx.globalAlpha = covered ? 0.35 : 1;
+    UI.text(ctx, def.e, x + w / 2, y + w / 2 + 1, { size: w * 0.46, align: &#x27;center&#x27; });
+    ctx.globalAlpha = 1;
+    if (t.sp &amp;&amp; t.sp !== &#x27;plain&#x27;) this.drawBadge(ctx, t, x, y, w, covered);
+  };
+
+  GameScene.prototype.drawBadge = function (ctx, t, x, y, w, covered) {
+    var sp = CORE.SPECIALS[t.sp];
+    if (!sp) return;
+    var s = Math.max(13, w * 0.34);
+    var bx = x + w - s * 0.55, by = y - s * 0.2;
+    if (t.sp === &#x27;bomb&#x27;) {
+      var left = (t.bombLeft != null &amp;&amp; t.bombLeft &gt; 0) ? t.bombLeft : t.bombK;
+      UI.fillRound(ctx, bx - s / 2, by, s, s, s / 2, left &lt;= 3 ? C.danger : C.soil);
+      UI.text(ctx, String(left), bx, by + s / 2, { size: s * 0.62, bold: true, color: &#x27;#fff&#x27;, al
+ign: &#x27;center&#x27; });
+      return;
+    }
+    if (t.sp === &#x27;chain&#x27; || t.sp === &#x27;supply&#x27;) {
+      UI.fillRound(ctx, bx - s / 2, by, s, s, s / 2, C.soil);
+      UI.text(ctx, String(t.chainN), bx, by + s / 2, { size: s * 0.58, bold: true, color: &#x27;#fff&#x27;
+, align: &#x27;center&#x27; });
+      return;
+    }
+    ctx.globalAlpha = covered ? 0.4 : 1;
+    UI.fillRound(ctx, bx - s / 2, by, s, s, s / 2, &#x27;#FFFFFF&#x27;);
+    UI.strokeRound(ctx, bx - s / 2, by, s, s, s / 2, C.line, 1.2);
+    UI.text(ctx, sp.emo, bx, by + s / 2, { size: s * 0.6, align: &#x27;center&#x27; });
+    ctx.globalAlpha = 1;
+  };
+
+  GameScene.prototype.draw = function (ctx, stage) {
+    var P = stage.plat, self = this;
+    var T = this.T;
+
+    // 顶部：关卡名与进度
+    UI.text(ctx, this.def.name || CORE.levelName(this.lv), P.W / 2, 44, { size: 16, bold: true, 
+align: &#x27;center&#x27; });</pre></div><div class="ft">第 24 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>    if (this.limit) {
+      var left = Math.max(0, this.limit - Math.floor((stage.now - this.startAt) / 1000));
+      UI.text(ctx, &#x27;⏱ &#x27; + Math.floor(left / 60) + &#x27;:&#x27; + (&#x27;0&#x27; + (left % 60)).slice(-2), P.W - 16,
+ 44,
+        { size: 13, bold: true, color: left &lt;= 20 ? C.danger : C.soil, align: &#x27;right&#x27; });
+    } else {
+      UI.text(ctx, this.mode === &#x27;normal&#x27; ? (&#x27;第 &#x27; + this.lv + &#x27; 关&#x27;) : (&#x27;第 &#x27; + (this.wave || 1
+) + &#x27; 波&#x27;),
+        P.W - 16, 44, { size: 12, color: C.dim, align: &#x27;right&#x27; });
+    }
+    var done = this.total - this.tiles.filter(function (t) { return !t.removed; }).length;
+    var pw = P.W - 32;
+    UI.fillRound(ctx, 16, 62, pw, 8, 4, C.mint);
+    UI.fillRound(ctx, 16, 62, pw * (done / this.total), 8, 4, C.leaf);
+    UI.text(ctx, done + &#x27;/&#x27; + this.total, P.W - 16, 82, { size: 11, color: C.dim, align: &#x27;right&#x27;
+ });
+    if (this.combo &gt; 1) UI.text(ctx, &#x27;连击 ×&#x27; + this.combo, 16, 82, { size: 11, color: C.soil })
+;
+
+    // 盘面：按层从下往上画，飞行中的牌单独画
+    var flying = {};
+    this.flying.forEach(function (f) { flying[f.t.id] = f; });
+    var board = this.tiles.filter(function (t) { return t.q &lt; 0; })
+      .sort(function (a, b) { return a.layer - b.layer; });
+    board.forEach(function (t) {
+      if (t.removed &amp;&amp; !flying[t.id]) return;
+      if (flying[t.id]) return;
+      var r = self.tileRect(t);
+      var cov = self.isCovered(t) || !!self.lockedBy(t);
+      self.drawTile(ctx, t, r.x, r.y, T, cov);
+      if (!cov &amp;&amp; !t.removed) stage.hits.add(r.x, r.y, T, T, function () { self.tap(t); });
+    });
+
+    // 底部牌堆
+    this.queues.forEach(function (q) {
+      q.slice().sort(function (a, b) { return b.qp - a.qp; }).forEach(function (t) {
+        if (t.removed &amp;&amp; !flying[t.id]) return;
+        if (flying[t.id]) return;
+        var r = self.tileRect(t);
+        var cov = self.isCovered(t) || !!self.lockedBy(t);
+        self.drawTile(ctx, t, r.x, r.y, T, cov);
+        if (!cov &amp;&amp; !t.removed) stage.hits.add(r.x, r.y, T, T, function () { self.tap(t); });
+      });
+    });
+
+    // 彩虹槽
+    var rw = P.W - 32;
+    UI.fillRound(ctx, 16, this.rainY, rw, 34, 17, &#x27;#F3ECFB&#x27;);
+    UI.text(ctx, &#x27;彩虹槽&#x27;, 30, this.rainY + 17, { size: 11, bold: true, color: &#x27;#7A5AA8&#x27; });
+    for (var i = 0; i &lt; 3; i++) {
+      var bx = 80 + i * 32;
+      UI.strokeRound(ctx, bx, this.rainY + 5, 24, 24, 6, &#x27;#C9B3E6&#x27;, 1.2);
+      if (this.rain[i]) UI.text(ctx, &#x27;🌈&#x27;, bx + 12, this.rainY + 17, { size: 14, align: &#x27;center&#x27; 
+});
+    }
+
+    // 卡槽
+    for (var s = 0; s &lt; this.slotN; s++) {
+      var sr = this.slotRect(s);
+      UI.fillRound(ctx, sr.x, sr.y, sr.w, sr.w, sr.w * 0.18, &#x27;#F1F6EC&#x27;);</pre></div><div class="ft">第 25 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>      UI.strokeRound(ctx, sr.x, sr.y, sr.w, sr.w, sr.w * 0.18, C.line, 1.2);
+    }
+    this.tray.forEach(function (t, i) {
+      if (flying[t.id]) return;
+      var sr = self.slotRect(i);
+      var fading = self.clearing &amp;&amp; self.clearing.trio.indexOf(t) &gt;= 0;
+      ctx.globalAlpha = fading ? 0.45 : 1;
+      self.drawTile(ctx, t, sr.x, sr.y, sr.w, false);
+      ctx.globalAlpha = 1;
+    });
+
+    // 飞行中的牌
+    this.flying.forEach(function (f) {
+      var k = Math.min(1, (stage.now - f.t0) / ANIM);
+      var e = 1 - Math.pow(1 - k, 3);
+      var sr = self.slotRect(self.tray.indexOf(f.t));
+      var x = f.x0 + (sr.x - f.x0) * e, y = f.y0 + (sr.y - f.y0) * e;
+      var w = T + (sr.w - T) * e;
+      self.drawTile(ctx, f.t, x, y, w, false);
+    });
+
+    // 三个道具
+    var S = SAVE.d;
+    var tools = [[&#x27;🔀&#x27;, &#x27;洗牌&#x27;, S.tools.shuffle, function () { self.useShuffle(); }],
+                 [&#x27;↩️&#x27;, &#x27;撤回&#x27;, S.tools.undo, function () { self.useUndo(); }],
+                 [&#x27;📤&#x27;, &#x27;移出&#x27;, S.tools.out, function () { self.useOut(); }]];
+    var tw = 64, gap = 18, tx0 = (P.W - tw * 3 - gap * 2) / 2, ty = P.H - 76;
+    tools.forEach(function (t, i) {
+      var x = tx0 + i * (tw + gap);
+      UI.fillRound(ctx, x, ty, tw, 52, 15, C.paper);
+      UI.strokeRound(ctx, x, ty, tw, 52, 15, C.line, 1.5);
+      UI.text(ctx, t[0], x + tw / 2, ty + 19, { size: 19, align: &#x27;center&#x27; });
+      UI.text(ctx, t[1], x + tw / 2, ty + 41, { size: 10.5, align: &#x27;center&#x27;, color: C.dim });
+      // 剩余数量角标
+      UI.fillRound(ctx, x + tw - 16, ty - 7, 22, 18, 9, t[2] &gt; 0 ? C.sun : &#x27;#D8DED4&#x27;);
+      UI.text(ctx, String(t[2]), x + tw - 5, ty + 2, { size: 11, bold: true, align: &#x27;center&#x27;, co
+lor: t[2] &gt; 0 ? &#x27;#6B4E12&#x27; : &#x27;#8B958A&#x27; });
+      stage.hits.add(x, ty, tw, 52, t[3], 4);
+    });
+
+    // 返回
+    UI.text(ctx, &#x27;‹ 返回&#x27;, 16, 44, { size: 13, color: C.forest });
+    stage.hits.add(8, 28, 66, 34, function () { stage.nav(self.mode === &#x27;normal&#x27; ? &#x27;levels&#x27; : &#x27;h
+ome&#x27;); });
+
+    if (this.over) this.drawResult(ctx, stage);
+  };
+
+  GameScene.prototype.drawResult = function (ctx, stage) {
+    var P = stage.plat, self = this;
+    ctx.fillStyle = &#x27;rgba(38,60,45,0.45)&#x27;;
+    ctx.fillRect(0, 0, P.W, P.H);
+    var w = P.W - 64, h = 292, x = 32, y = (P.H - h) / 2;
+    UI.fillRound(ctx, x, y, w, h, 22, C.paper);
+    var win = this.over === 1;
+    UI.text(ctx, win ? &#x27;通关！&#x27; : &#x27;这一局没过去&#x27;, P.W / 2, y + 48, { size: 22, bold: true, align
+: &#x27;center&#x27;, color: win ? C.forest : C.soil });
+    var secs = Math.round((Date.now() - this.startAt) / 1000);
+    UI.text(ctx, win ? (&#x27;用时 &#x27; + Math.floor(secs / 60) + &#x27;:&#x27; + (&#x27;0&#x27; + (secs % 60)).slice(-2) + 
+&#x27;　最高连击 ×&#x27; + this.maxCombo)</pre></div><div class="ft">第 26 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>      : (this.deathBy === &#x27;bomb&#x27; ? &#x27;炸弹倒数归零了&#x27;
+        : this.deathBy === &#x27;time&#x27; ? &#x27;时间到了&#x27;
+        : &#x27;卡槽被占满，没有可消的三张&#x27;),
+      P.W / 2, y + 88, { size: 13, color: C.dim, align: &#x27;center&#x27; });
+
+    if (win &amp;&amp; this.reward) {
+      var st = &#x27;&#x27;;
+      for (var s = 0; s &lt; 3; s++) st += (s &lt; this.reward.stars ? &#x27;★&#x27; : &#x27;☆&#x27;);
+      UI.text(ctx, st, P.W / 2, y + 116, { size: 20, color: C.sun, align: &#x27;center&#x27; });
+      UI.text(ctx, &#x27;金币 +&#x27; + this.reward.coin + (this.reward.wool ? &#x27;　羊毛 +&#x27; + this.reward.wo
+ol : &#x27;&#x27;),
+        P.W / 2, y + 142, { size: 12.5, color: C.forest, align: &#x27;center&#x27; });
+      if (this.newAch &amp;&amp; this.newAch.length) {
+        UI.text(ctx, &#x27;解锁成就：&#x27; + this.newAch[0][1], P.W / 2, y + 162, { size: 11, color: C.so
+il, align: &#x27;center&#x27; });
+      }
+    } else if (!win) {
+      UI.text(ctx, &#x27;这一局是有解的，换个取牌顺序再试试&#x27;, P.W / 2, y + 118, { size: 11.5, color: 
+C.dim, align: &#x27;center&#x27; });
+    }
+
+    var by = y + 180;
+    if (win &amp;&amp; this.mode === &#x27;normal&#x27;) {
+      UI.button(ctx, stage, x + 24, by, w - 48, 46, &#x27;下一关&#x27;, function () {
+        self.lv = Math.min(CORE.MAX_LEVEL, self.lv + 1); self.seed = null; self.reset();
+      }, { bg: C.forest });
+    } else if (win) {
+      UI.button(ctx, stage, x + 24, by, w - 48, 46, &#x27;回到首页&#x27;, function () { stage.nav(&#x27;home&#x27;);
+ }, { bg: C.forest });
+    } else {
+      UI.button(ctx, stage, x + 24, by, w - 48, 46, &#x27;再试一次&#x27;, function () { self.seed = null; 
+self.reset(); }, { bg: C.forest });
+    }
+    UI.button(ctx, stage, x + 24, by + 54, w - 48, 38, self.mode === &#x27;normal&#x27; ? &#x27;关卡地图&#x27; : &#x27;回
+到首页&#x27;,
+      function () { stage.nav(self.mode === &#x27;normal&#x27; ? &#x27;levels&#x27; : &#x27;home&#x27;); }, { bg: C.mint, fg: 
+C.forest });
+  };
+
+  if (typeof module !== &#x27;undefined&#x27; &amp;&amp; module.exports) module.exports = GameScene;
+  else if (typeof globalThis !== &#x27;undefined&#x27;) globalThis.GameScene = GameScene;
+})();
+
+
+/* ===== 微信小游戏版 minigame/js/ui.js ===== */
+/* Canvas 绘制与交互基础件。
+   小游戏没有 DOM，圆角、文本、按钮命中、场景栈这些都得自己实现一遍。
+   配色与网页版 :root 里的 CSS 变量一一对应。 */
+(function () {
+  var C = {
+    ink: &#x27;#264D33&#x27;, forest: &#x27;#2E6B3E&#x27;, leaf: &#x27;#4C9A5A&#x27;, grass: &#x27;#7DBB6E&#x27;,
+    mint: &#x27;#D3E8C6&#x27;, cream: &#x27;#F6FAF0&#x27;, paper: &#x27;#FFFFFF&#x27;, line: &#x27;#E2EDD8&#x27;,
+    soil: &#x27;#8A6B4A&#x27;, sun: &#x27;#F6C445&#x27;, dim: &#x27;#8AA085&#x27;, danger: &#x27;#B4714E&#x27;
+  };
+
+  var FONT = &#x27;PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif&#x27;;
+
+  function font(ctx, size, bold) {
+    ctx.font = (bold ? &#x27;700 &#x27; : &#x27;400 &#x27;) + size + &#x27;px &#x27; + FONT;
+  }</pre></div><div class="ft">第 27 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>
+  function roundRect(ctx, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function fillRound(ctx, x, y, w, h, r, color) {
+    roundRect(ctx, x, y, w, h, r);
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  function strokeRound(ctx, x, y, w, h, r, color, lw) {
+    roundRect(ctx, x, y, w, h, r);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lw || 1.5;
+    ctx.stroke();
+  }
+
+  function text(ctx, s, x, y, opt) {
+    opt = opt || {};
+    font(ctx, opt.size || 14, opt.bold);
+    ctx.fillStyle = opt.color || C.ink;
+    ctx.textAlign = opt.align || &#x27;left&#x27;;
+    ctx.textBaseline = opt.baseline || &#x27;middle&#x27;;
+    ctx.fillText(s, x, y);
+  }
+
+  /* 简单的中文换行：canvas 没有排版，只能逐字量宽 */
+  function wrapText(ctx, s, maxW, size) {
+    font(ctx, size || 13, false);
+    var out = [], cur = &#x27;&#x27;;
+    for (var i = 0; i &lt; s.length; i++) {
+      var ch = s[i];
+      if (ch === &#x27;\n&#x27;) { out.push(cur); cur = &#x27;&#x27;; continue; }
+      if (ctx.measureText(cur + ch).width &gt; maxW &amp;&amp; cur) { out.push(cur); cur = ch; }
+      else cur += ch;
+    }
+    if (cur) out.push(cur);
+    return out;
+  }
+
+  /* --- 点击热区：每帧重建，命中取最后注册（最上层） --- */
+  function HitLayer() {
+    this.items = [];
+  }
+  HitLayer.prototype.clear = function () { this.items.length = 0; };
+  HitLayer.prototype.add = function (x, y, w, h, fn, pad) {
+    pad = pad || 0;
+    this.items.push({ x: x - pad, y: y - pad, w: w + pad * 2, h: h + pad * 2, fn: fn });
+  };
+  HitLayer.prototype.hit = function (px, py) {
+    for (var i = this.items.length - 1; i &gt;= 0; i--) {
+      var it = this.items[i];</pre></div><div class="ft">第 28 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>      if (px &gt;= it.x &amp;&amp; px &lt;= it.x + it.w &amp;&amp; py &gt;= it.y &amp;&amp; py &lt;= it.y + it.h) return it;
+    }
+    return null;
+  };
+
+  /* --- 场景栈 --- */
+  function Stage(plat) {
+    this.plat = plat;
+    this.ctx = plat.ctx;
+    this.hits = new HitLayer();
+    this.scene = null;
+    this.pending = null;
+    this.toastMsg = &#x27;&#x27;;
+    this.toastUntil = 0;
+    this.now = 0;
+    var self = this;
+    plat.onTouch({
+      start: function (x, y) { self._down = [x, y]; self._downAt = Date.now(); },
+      end: function (x, y) {
+        if (!self._down) return;
+        var dx = x - self._down[0], dy = y - self._down[1];
+        self._down = null;
+        if (Math.abs(dx) &gt; 12 || Math.abs(dy) &gt; 12) return;   // 滑动不算点击
+        var h = self.hits.hit(x, y);
+        if (h &amp;&amp; h.fn) h.fn(x, y);
+      },
+      move: function (x, y) {
+        if (self.scene &amp;&amp; self.scene.onMove &amp;&amp; self._down) self.scene.onMove(x, y, self._down);
+      }
+    });
+  }
+  Stage.prototype.go = function (scene) { this.pending = scene; };
+  Stage.prototype.toast = function (msg, ms) {
+    this.toastMsg = msg;
+    this.toastUntil = Date.now() + (ms || 1600);
+  };
+  Stage.prototype.start = function () {
+    var self = this;
+    var loop = function () {
+      self.now = Date.now();
+      if (self.pending) {
+        if (self.scene &amp;&amp; self.scene.exit) self.scene.exit();
+        self.scene = self.pending;
+        self.pending = null;
+        if (self.scene.enter) self.scene.enter(self);
+      }
+      self.hits.clear();
+      var ctx = self.ctx;
+      ctx.fillStyle = C.cream;
+      ctx.fillRect(0, 0, self.plat.W, self.plat.H);
+      if (self.scene) {
+        if (self.scene.update) self.scene.update(self.now);
+        self.scene.draw(ctx, self);
+      }
+      self._drawToast(ctx);
+      self.plat.raf(loop);
+    };
+    self.plat.raf(loop);
+  };
+  Stage.prototype._drawToast = function (ctx) {</pre></div><div class="ft">第 29 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>    if (!this.toastMsg || Date.now() &gt; this.toastUntil) return;
+    var w = this.plat.W;
+    font(ctx, 12.5, false);
+    var tw = ctx.measureText(this.toastMsg).width + 36;
+    var x = (w - tw) / 2, y = this.plat.H - 190;
+    fillRound(ctx, x, y, tw, 36, 18, &#x27;rgba(38,77,51,0.92)&#x27;);
+    text(ctx, this.toastMsg, w / 2, y + 18, { size: 12.5, color: &#x27;#fff&#x27;, align: &#x27;center&#x27; });
+  };
+
+  /* --- 通用按钮 --- */
+  function button(ctx, stage, x, y, w, h, label, fn, opt) {
+    opt = opt || {};
+    var bg = opt.bg || C.forest, fg = opt.fg || &#x27;#fff&#x27;;
+    fillRound(ctx, x, y, w, h, opt.r == null ? h / 2 : opt.r, bg);
+    if (opt.border) strokeRound(ctx, x, y, w, h, opt.r == null ? h / 2 : opt.r, opt.border, 1.5)
+;
+    text(ctx, label, x + w / 2, y + h / 2, { size: opt.size || 15, bold: true, color: fg, align:
+ &#x27;center&#x27; });
+    if (fn) stage.hits.add(x, y, w, h, fn, 4);
+  }
+
+  var UI = {
+    C: C, FONT: FONT, font: font, roundRect: roundRect, fillRound: fillRound,
+    strokeRound: strokeRound, text: text, wrapText: wrapText,
+    HitLayer: HitLayer, Stage: Stage, button: button
+  };
+
+  if (typeof module !== &#x27;undefined&#x27; &amp;&amp; module.exports) module.exports = UI;
+  else if (typeof globalThis !== &#x27;undefined&#x27;) globalThis.UI = UI;
+})();
+
+
+/* ===== 微信小游戏版 minigame/js/page.js ===== */
+/* 页面外壳：顶部标题、底部导航、可滚动内容区。
+   canvas 没有滚动容器，滚动要自己实现：记住偏移量、按内容高度夹住、
+   触摸移动时改偏移，并且滚动中不能触发点击。 */
+(function () {
+  var UI = (typeof require !== &#x27;undefined&#x27;) ? require(&#x27;./ui.js&#x27;) : globalThis.UI;
+  var C = UI.C;
+
+  var TABS = [
+    { id: &#x27;home&#x27;, name: &#x27;首页&#x27;, emo: &#x27;🏠&#x27; },
+    { id: &#x27;levels&#x27;, name: &#x27;关卡&#x27;, emo: &#x27;🗺️&#x27; },
+    { id: &#x27;rank&#x27;, name: &#x27;排行&#x27;, emo: &#x27;🏆&#x27; },
+    { id: &#x27;shop&#x27;, name: &#x27;商店&#x27;, emo: &#x27;🛍️&#x27; },
+    { id: &#x27;mine&#x27;, name: &#x27;我的&#x27;, emo: &#x27;🐑&#x27; }
+  ];
+  var TABBAR_H = 62;
+
+  function Page(tab, title) {
+    this.tab = tab;
+    this.title = title;
+    this.scroll = 0;
+    this.contentH = 0;
+    this._lastY = null;
+  }
+
+  Page.prototype.enter = function (stage) {
+    this.stage = stage;
+    this.scroll = 0;</pre></div><div class="ft">第 30 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>    }
+    tray.push(t);
+    const by={}; tray.forEach(x=&gt;{ (by[x.type]=by[x.type]||[]).push(x); });
+    let trio=null; for(const k in by) if(by[k].length&gt;=3){ trio=by[k].slice(0,3); break; }
+    if(trio) trio.forEach(x=&gt;{ clearAt.set(x,i); tray.splice(tray.indexOf(x),1); });
+  }
+  let ok=true;
+  rest.concat(held).forEach(t=&gt;{
+    if(t.sp!==&#x27;bomb&#x27;) return;
+    const c=clearAt.get(t);
+    if(c===undefined){ ok=false; return; }
+    const start=pos.has(t)?pos.get(t):-1;
+    let ins=0;                                  /* 倒数按「之后有几张牌入槽」走，彩虹牌不入槽 */
+    for(let i=start+1;i&lt;=c;i++) if(order[i]&amp;&amp;order[i].sp!==&#x27;rain&#x27;) ins++;
+    t.bombK=ins+2;
+    if(start&lt;0) t.bombLeft=t.bombK;             /* 已在卡槽里的炸弹，倒数一并重置 */
+  });
+  return ok;
+}
+
+/* 按全部游戏规则回放一遍，确认这条顺序真的走得通 */
+function verifyPlayable(rest,order,held,rainHeld){
+  const set=new Set(rest), tray=held.slice(), rainSlot=rainHeld.slice();
+  const frozen=new Map(), bomb=new Map();
+  rest.forEach(t=&gt;{ if(t.sp===&#x27;freeze&#x27;&amp;&amp;t.frozen) frozen.set(t,true); });
+  tray.forEach(t=&gt;{ if(t.sp===&#x27;bomb&#x27;) bomb.set(t,t.bombLeft||t.bombK); });
+  let m=G.matches;
+  for(const t of order){
+    if(!freeIn(t,set)) return false;
+    if(t.sp===&#x27;freeze&#x27;&amp;&amp;frozen.get(t)) return false;
+    if((t.sp===&#x27;chain&#x27;||t.sp===&#x27;supply&#x27;)&amp;&amp;m&lt;t.chainN) return false;
+    set.delete(t);
+    for(const o of set) if(o.sp===&#x27;freeze&#x27;&amp;&amp;frozen.get(o)&amp;&amp;tileNb(o,t)) frozen.set(o,false);
+    if(t.sp===&#x27;rain&#x27;){ rainSlot.push(t); if(rainSlot.length&gt;=3){ rainSlot.length=0; m++; } conti
+nue; }
+    tray.push(t);
+    if(t.sp===&#x27;bomb&#x27;) bomb.set(t,t.bombK);
+    let blew=false;
+    bomb.forEach((v,k)=&gt;{ if(k!==t&amp;&amp;tray.includes(k)){ bomb.set(k,v-1); if(v-1&lt;=0) blew=true; } 
+});
+    const by={}; tray.forEach(x=&gt;{ (by[x.type]=by[x.type]||[]).push(x); });
+    let trio=null; for(const k in by) if(by[k].length&gt;=3){ trio=by[k].slice(0,3); break; }
+    if(trio){ trio.forEach(x=&gt;{ tray.splice(tray.indexOf(x),1); bomb.delete(x); }); m++; }
+    else if(blew) return false;
+    if(tray.length&gt;=SLOT_N) return false;
+  }
+  return set.size===0 &amp;&amp; tray.length===0 &amp;&amp; rainSlot.length===0;
+}
+function reshuffleSolvable(){
+  const rest=G.tiles.filter(t=&gt;!t.removed);
+  if(rest.length&lt;3) return &#x27;empty&#x27;;
+  /* 用本局真正的配置。每日/周常/无尽的 G.lv 都是 1，
+     直接 levelDef(G.lv) 会回落到第 1 关，把题面洗成幼儿园难度 */
+  const cfg=G.rcfg||{types:levelDef(G.lv).cfg.types,d:levelDef(G.lv).cfg.d};
+  const cap=Math.max(3,Math.min(SLOT_N-1,(cfg.d||3)-(toolLv(&#x27;shuffle&#x27;)-1)));
+  const held=G.tray.filter(x=&gt;!x.matching);
+  const rainHeld=G.rain.filter(x=&gt;!x.matching);
+  const heldCount={};
+  held.forEach(t=&gt;heldCount[t.type]=(heldCount[t.type]||0)+1);
+</pre></div><div class="ft">第 31 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>  const plain=rest.filter(t=&gt;t.sp!==&#x27;rain&#x27;);     /* 彩虹牌不参与花色配额 */
+  const backup=rest.map(t=&gt;t.type);
+  const bombBackup=rest.concat(held).map(t=&gt;[t,t.bombK,t.bombLeft]);
+
+  let needTotal=0;
+  for(const c in heldCount) needTotal+=3-heldCount[c];
+  const triples=(plain.length-needTotal)/3;
+  if(triples&lt;0||triples%1!==0) return &#x27;fail&#x27;;
+
+  for(let attempt=0;attempt&lt;14;attempt++){
+    const order=solveOrderLocked(rest,G.matches);
+    if(!order) continue;
+    const remain={};
+    for(const c in heldCount) remain[c]=3-heldCount[c];
+    const pool=planColors(cfg.types,triples);
+    for(const c in pool) remain[c]=(remain[c]||0)+(+pool[c]);
+    /* collect 目标：保证目标花色还留在盘面上，否则任务被无声废掉。
+       搬运量必须是 3 的倍数，否则会破坏「每色总数是 3 的倍数」这条不变量 */
+    const g=G.goal;
+    if(g&amp;&amp;g.t===&#x27;collect&#x27;){
+      const want=3*Math.max(1,g.need-g.got);
+      if((remain[g.type]||0)&lt;want){
+        const donor=Object.keys(remain).map(Number)
+          .filter(c=&gt;c!==g.type).sort((a,b)=&gt;remain[b]-remain[a])[0];
+        if(donor!=null){
+          let move=Math.min(want-(remain[g.type]||0),Math.max(0,(remain[donor]||0)-3));
+          move=Math.floor(move/3)*3;
+          if(move&gt;0){ remain[donor]-=move; remain[g.type]=(remain[g.type]||0)+move; }
+        }
+      }
+    }
+    paintOrder(order,remain,heldCount,cap);
+    if(!retimeBombs(rest,order,held,rainHeld)) continue;
+    if(verifyPlayable(rest,order,held,rainHeld)) return &#x27;ok&#x27;;
+  }
+  rest.forEach((t,i)=&gt;{ t.type=backup[i]; });   /* 洗不出可解局面，原样还回去 */
+  bombBackup.forEach(([t,k,l])=&gt;{ t.bombK=k; t.bombLeft=l; });
+  return &#x27;fail&#x27;;
+}
+function repaint(t){
+  t.el.style.setProperty(&#x27;--cell-c&#x27;,TYPE_DEFS[t.type].c);
+  t.el.innerHTML=face(t.type);
+  t.el.style.transform=&#x27;scale(.72)&#x27;;
+  setTimeout(()=&gt;{ t.el.style.transform=&#x27;&#x27;; },180);
+}
+function doShuffle(){
+  const alive=G.tiles.filter(t=&gt;!t.removed);
+  if(alive.length&lt;3){ toast(&#x27;没有可洗的牌&#x27;); SFX.deny(); return false; }
+  /* 卡槽已占 6 格且没有任何两张同色 —— 下一张必死，洗牌救不了，别浪费道具 */
+  const hc={};
+  G.tray.filter(x=&gt;!x.matching).forEach(t=&gt;hc[t.type]=(hc[t.type]||0)+1);
+  if(G.tray.filter(x=&gt;!x.matching).length&gt;=SLOT_N-1 &amp;&amp; !Object.keys(hc).some(c=&gt;hc[c]===2)){
+    toast(&#x27;卡槽里没有能凑对的，洗牌救不了，试试「移出」&#x27;);
+    SFX.deny(); return false;
+  }
+  /* 先洗，洗不出可解局面就不扣道具 —— 绝不能一边说「保证有解」一边给个死局 */
+  const r=reshuffleSolvable();
+  if(r!==&#x27;ok&#x27;){
+    toast(&#x27;这个局面洗不出有解的排布，道具没有消耗&#x27;);
+    SFX.deny();</pre></div><div class="ft">第 32 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>    return false;
+  }
+  if(!spend(&#x27;shuffle&#x27;)){ return false; }
+  alive.forEach(repaint);
+  G.dirty=true;          /* 花色变了，存下来的参考解法不再成立 */
+  refreshCover();
+  saveProgress();
+  SFX.coin();
+  toast(&#x27;已重新洗牌 · 保证仍有解&#x27;);
+  return true;
+}
+function doUndo(){
+  if(![...G.history].reverse().find(t=&gt;t.inTray&amp;&amp;!t.matching)){
+    toast(&#x27;还没有可撤回的操作&#x27;); SFX.deny(); return false;
+  }
+  if(!spend(&#x27;undo&#x27;)) return false;
+  let n=0;
+  for(let i=0;i&lt;toolLv(&#x27;undo&#x27;);i++){
+    const last=[...G.history].reverse().find(t=&gt;t.inTray&amp;&amp;!t.matching);
+    if(!last) break;
+    G.tray=G.tray.filter(x=&gt;x!==last);
+    G.rain=G.rain.filter(x=&gt;x!==last);
+    last.removed=false; last.inTray=false;
+    last.el.classList.remove(&#x27;out&#x27;);
+    G.history=G.history.filter(x=&gt;x!==last);
+    n++;
+  }
+  if(G.goal&amp;&amp;G.goal.t===&#x27;steps&#x27;) G.goal.used=Math.max(0,G.goal.used-n);
+  renderTray(); renderRain(); refreshCover(); updateProg(); updateGoal(); saveProgress();
+  toast(&#x27;已撤回 &#x27;+n+&#x27; 步&#x27;);
+  return true;
+}
+function doOut(){
+  const list=G.tray.filter(x=&gt;!x.matching).slice(0,2+toolLv(&#x27;out&#x27;));
+  if(!list.length){ toast(&#x27;卡槽是空的&#x27;); SFX.deny(); return false; }
+  if(!spend(&#x27;out&#x27;)) return false;
+  list.forEach(t=&gt;{
+    t.removed=false; t.inTray=false;
+    t.el.classList.remove(&#x27;out&#x27;);
+    G.history=G.history.filter(x=&gt;x!==t);
+  });
+  G.tray=G.tray.filter(x=&gt;!list.includes(x));
+  if(G.goal&amp;&amp;G.goal.t===&#x27;steps&#x27;) G.goal.used=Math.max(0,G.goal.used-list.length);
+  renderTray(); refreshCover(); updateProg(); updateGoal(); saveProgress();
+  toast(&#x27;已移出 &#x27;+list.length+&#x27; 块&#x27;);
+  return true;
+}
+$(&#x27;#t-shuffle&#x27;).onclick=()=&gt;{ if(!G.over) doShuffle(); };
+$(&#x27;#t-undo&#x27;).onclick=()=&gt;{ if(!G.over) doUndo(); };
+$(&#x27;#t-out&#x27;).onclick=()=&gt;{ if(!G.over) doOut(); };
+
+/* 失败页复活 */
+$(&#x27;#fail-tips&#x27;).addEventListener(&#x27;click&#x27;,e=&gt;{
+  const el=e.target.closest(&#x27;.tip&#x27;); if(!el) return;
+  const k=el.dataset.tool;
+  if(save.tools[k]&lt;=0){ toast(&#x27;道具不足，去商店看看吧&#x27;); SFX.deny(); return; }
+  G.over=false;
+  let ok=false;
+  if(k===&#x27;shuffle&#x27;){
+    /* 洗牌复活：先把卡槽清空一格再洗，避免立刻又满 */</pre></div><div class="ft">第 33 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>    ok=doShuffle();
+    if(ok){ const t=G.tray.filter(x=&gt;!x.matching).slice(0,2); t.forEach(x=&gt;{x.removed=false;x.in
+Tray=false;x.el.classList.remove(&#x27;out&#x27;);G.history=G.history.filter(y=&gt;y!==x);}); G.tray=G.tray.f
+ilter(x=&gt;!t.includes(x)); renderTray(); refreshCover(); updateProg(); }
+  }
+  else if(k===&#x27;undo&#x27;) ok=doUndo();
+  else ok=doOut();
+  if(ok){
+    if(G.deathBy===&#x27;time&#x27;) G.startAt+=30000;   /* 超时复活补 30 秒，否则一回去就又超时 */
+    G.deathBy=&#x27;&#x27;;
+    go(&#x27;s-game&#x27;); requestAnimationFrame(layout); startTimer(); saveProgress();
+    toast(&#x27;复活成功，继续加油！&#x27;);
+  }
+  else G.over=true;
+});
+$(&#x27;#replay-skip&#x27;).onclick=stopReplay;
+$(&#x27;#fail-replay&#x27;).onclick=startReplay;
+$(&#x27;#fail-retry&#x27;).onclick=()=&gt;{
+  clearProgress();
+  if(G.mode===&#x27;endless&#x27;){ G.wave=1; G.score=0; G.buffs=null; }
+  go(&#x27;s-game&#x27;); startLevel(G.lv); requestAnimationFrame(layout);
+};
+$(&#x27;#win-next&#x27;).onclick=()=&gt;{
+  clearProgress();
+  if(G.mode===&#x27;daily&#x27;||G.mode===&#x27;weekly&#x27;){ go(&#x27;s-game&#x27;); startLevel(G.lv); requestAnimationFrame
+(layout); return; }
+  const nx=G.lv&lt;MAX_LEVEL?G.lv+1:G.lv;
+  go(&#x27;s-game&#x27;); startLevel(nx); requestAnimationFrame(layout);
+};
+/* 暗号分享 */
+$(&#x27;#code-ok&#x27;).onclick=()=&gt;$(&#x27;#codeMask&#x27;).classList.remove(&#x27;on&#x27;);
+/* 点弹层背景关掉，是通用预期。#buffMask 是必选三选一，故意不给关 */
+[&#x27;spMask&#x27;,&#x27;chMask&#x27;,&#x27;codeMask&#x27;,&#x27;codeInMask&#x27;].forEach(id=&gt;{
+  const m=document.getElementById(id);
+  if(m) m.addEventListener(&#x27;click&#x27;,e=&gt;{ if(e.target===m) m.classList.remove(&#x27;on&#x27;); });
+});
+$(&#x27;#btn-code&#x27;).onclick=()=&gt;{ $(&#x27;#code-in&#x27;).value=&#x27;&#x27;; $(&#x27;#codeInMask&#x27;).classList.add(&#x27;on&#x27;); setTi
+meout(()=&gt;$(&#x27;#code-in&#x27;).focus(),80); };
+$(&#x27;#code-cancel&#x27;).onclick=()=&gt;$(&#x27;#codeInMask&#x27;).classList.remove(&#x27;on&#x27;);
+$(&#x27;#code-go&#x27;).onclick=()=&gt;{
+  const p=parseCode($(&#x27;#code-in&#x27;).value);
+  if(!p){ toast(&#x27;暗号看不懂，检查一下有没有打错&#x27;); SFX.deny(); return; }
+  $(&#x27;#codeInMask&#x27;).classList.remove(&#x27;on&#x27;);
+  clearProgress(); G.mode=&#x27;normal&#x27;; G.forceSeed=p.seed; G.pendingTarget=p.target||null;
+  go(&#x27;s-game&#x27;); startLevel(p.lv); requestAnimationFrame(layout);
+  toast(p.target ? (&#x27;战书已接下 · 目标 &#x27;+fmtTime(p.target.time)) : (&#x27;第 &#x27;+p.lv+&#x27; 关 · 朋友的题面
+&#x27;));
+};
+$(&#x27;#code-in&#x27;).addEventListener(&#x27;keydown&#x27;,e=&gt;{ if(e.key===&#x27;Enter&#x27;) $(&#x27;#code-go&#x27;).click(); });
+$$(&#x27;.btn-share&#x27;).forEach(b=&gt;b.onclick=shareCurrent);
+
+/* 模式入口 */
+$(&#x27;#btn-daily&#x27;).onclick=()=&gt;{
+  G.mode=&#x27;daily&#x27;; G.wave=1; G.score=0;
+  go(&#x27;s-game&#x27;); startLevel(1); requestAnimationFrame(layout);
+};
+$(&#x27;#btn-endless&#x27;).onclick=()=&gt;{
+  G.mode=&#x27;endless&#x27;; G.wave=1; G.score=0; G.buffs=null;
+  go(&#x27;s-game&#x27;); startLevel(1); requestAnimationFrame(layout);
+};</pre></div><div class="ft">第 34 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>$(&#x27;#btn-weekly&#x27;).onclick=()=&gt;{
+  G.mode=&#x27;weekly&#x27;; G.wave=1; G.score=0;
+  go(&#x27;s-game&#x27;); startLevel(1); requestAnimationFrame(layout);
+  toast(&#x27;本周规则：&#x27;+weeklyMod().d);
+};
+$(&#x27;#btn-restart&#x27;).onclick=()=&gt;{ clearProgress(); startLevel(G.lv); requestAnimationFrame(layout)
+; toast(&#x27;已重置本关&#x27;); };
+$(&#x27;#g-back&#x27;).onclick=()=&gt;go(&#x27;s-levels&#x27;);
+$(&#x27;#btn-sound&#x27;).onclick=()=&gt;{
+  save.sound=!save.sound; persist();
+  $(&#x27;#btn-sound&#x27;).innerHTML=&#x27;&lt;i class=&quot;fa-solid &#x27;+(save.sound?&#x27;fa-volume-high&#x27;:&#x27;fa-volume-xmark&#x27;
+)+&#x27;&quot;&gt;&lt;/i&gt;&#x27;;
+  applyLang(document.body);
+  toast(save.sound?&#x27;音效已开启&#x27;:&#x27;音效已关闭&#x27;);
+  if(save.sound) SFX.pick();
+};
+
+/* =====================================================================
+   首页 / 签到
+   ===================================================================== */
+const SAYINGS=[
+  &#x27;风把云吹散了，剩下的时间，都用来陪你喜欢的羊吧。&#x27;,
+  &#x27;慢一点也没关系，草原上的路从来不催人。&#x27;,
+  &#x27;今天的第一缕阳光，已经替你晒暖了牧场。&#x27;,
+  &#x27;把烦恼交给风，把青草留给羊。&#x27;,
+  &#x27;走得远不如走得稳，羊群会一直等你。&#x27;
+];
+function dateKey(d){ d=d||new Date(); return d.getFullYear()+&#x27;-&#x27;+(d.getMonth()+1)+&#x27;-&#x27;+d.getDate(
+); }
+function yesterdayKey(){ const d=new Date(); d.setDate(d.getDate()-1); return dateKey(d); }
+
+function renderHome(){
+  const d=new Date();
+  const h=d.getHours();
+  $(&#x27;#g-hi&#x27;).textContent = h&lt;5?&#x27;夜深了，牧羊人&#x27;:h&lt;11?&#x27;早上好，牧羊人&#x27;:h&lt;13?&#x27;中午好，牧羊人&#x27;:h&lt;18
+?&#x27;下午好，牧羊人&#x27;:h&lt;22?&#x27;傍晚好，牧羊人&#x27;:&#x27;晚安，牧羊人&#x27;;
+  $(&#x27;#g-date&#x27;).textContent=(d.getMonth()+1)+&#x27;月&#x27;+d.getDate()+&#x27;日 · &#x27;+[&#x27;周日&#x27;,&#x27;周一&#x27;,&#x27;周二&#x27;,&#x27;周三
+&#x27;,&#x27;周四&#x27;,&#x27;周五&#x27;,&#x27;周六&#x27;][d.getDay()];
+  $(&#x27;#g-say&#x27;).textContent=SAYINGS[(d.getDate()+d.getMonth())%SAYINGS.length];
+  /* 用存档里真实的累计数据，不编全服统计 —— 本作没有服务端 */
+  const done=(save.st&amp;&amp;save.st.matches)||0;
+  $(&#x27;#home-note&#x27;).textContent = done
+    ? &#x27;你已经清了 &#x27;+fmt(done)+&#x27; 组草料，羊群走过 &#x27;+save.cleared+&#x27; 关&#x27;
+    : &#x27;羊群已经在坡上等你了&#x27;;
+  const p=resumable();
+  $(&#x27;#btn-start&#x27;).innerHTML=&#x27;&lt;i class=&quot;fa-solid fa-play&quot;&gt;&lt;/i&gt;&#x27;+
+    (p ? &#x27;继续本局 · 第 &#x27;+p.lv+&#x27; 关&#x27;
+       : save.cleared ? &#x27;继续闯关 · 第 &#x27;+save.level+&#x27; 关&#x27; : &#x27;开始游戏&#x27;);
+  const dk=String(dailySeed());
+  const dd=(save.daily||{})[dk];
+  $(&#x27;#daily-sub&#x27;).textContent = dd ? (&#x27;今日 &#x27;+fmtTime(dd.time)) : &#x27;全服同题&#x27;;
+  $(&#x27;#btn-daily&#x27;).classList.toggle(&#x27;hasdone&#x27;,!!dd);
+  $(&#x27;#endless-sub&#x27;).textContent = save.endless ? (&#x27;最佳 &#x27;+save.endless+&#x27; 组&#x27;) : &#x27;最佳 0 组&#x27;;
+  $(&#x27;#weekly-sub&#x27;).textContent = weeklyMod().n;
+  $(&#x27;#btn-endless&#x27;).classList.toggle(&#x27;hasdone&#x27;,save.endless&gt;0);
+  renderCheckin();
+  renderTasks();
+  updateChips();
+}
+function renderCheckin(){</pre></div><div class="ft">第 35 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>  const ck=save.checkin;
+  const claimed = ck.date===dateKey();
+  const box=$(&#x27;#ck-days&#x27;); box.innerHTML=&#x27;&#x27;;
+  const streak=ck.streak||0;
+  const start=new Date();
+  start.setDate(start.getDate()-(claimed?Math.max(0,streak-1):streak));
+  const WD=[&#x27;周日&#x27;,&#x27;周一&#x27;,&#x27;周二&#x27;,&#x27;周三&#x27;,&#x27;周四&#x27;,&#x27;周五&#x27;,&#x27;周六&#x27;];
+  for(let i=0;i&lt;7;i++){
+    const day=new Date(start); day.setDate(start.getDate()+i);
+    const doneCount=claimed?streak:streak;
+    const isDone=i&lt;doneCount;
+    const isToday=(claimed? i===streak-1 : i===streak);
+    const wrap=document.createElement(&#x27;div&#x27;);
+    wrap.className=&#x27;day&#x27;;
+    /* 奖励直接标在每一格上：原来要签到成功弹个 toast 才知道给了多少，
+       看不到「第 7 天有 100」就没有连签的动力。月卡加成也算进去，显示的就是实得数 */
+    const base=CK_COIN[i], real=save.pass?base*2+40:base;
+    wrap.innerHTML=&#x27;&lt;div class=&quot;dot&#x27;+(isToday&amp;&amp;!claimed?&#x27; today&#x27;:(isDone?&#x27; done&#x27;:&#x27;&#x27;))+&#x27;&quot;&gt;&#x27;+
+      (isDone&amp;&amp;!(isToday&amp;&amp;!claimed)?&#x27;&lt;i class=&quot;fa-solid fa-check&quot;&gt;&lt;/i&gt;&#x27;:(i+1))+&#x27;&lt;/div&gt;&#x27;+
+      &#x27;&lt;span&#x27;+(isToday?&#x27; class=&quot;on&quot;&#x27;:&#x27;&#x27;)+&#x27;&gt;&#x27;+WD[day.getDay()]+&#x27;&lt;/span&gt;&#x27;+
+      &#x27;&lt;span class=&quot;rw&#x27;+(isToday&amp;&amp;!claimed?&#x27; on&#x27;:&#x27;&#x27;)+(isDone&amp;&amp;!(isToday&amp;&amp;!claimed)?&#x27; got&#x27;:&#x27;&#x27;)+&#x27;&quot;
+&gt;&#x27;+
+      &#x27;&lt;i class=&quot;fa-solid fa-circle&quot;&gt;&lt;/i&gt;&#x27;+real+&#x27;&lt;/span&gt;&#x27;;
+    if(isToday&amp;&amp;!claimed) wrap.onclick=doCheckin;
+    else wrap.onclick=()=&gt;toast(claimed?&#x27;今天已经签到过啦，明天再来&#x27;:&#x27;先完成前面的签到吧&#x27;);
+    box.appendChild(wrap);
+  }
+  $(&#x27;#ck-streak&#x27;).textContent = claimed ? &#x27;今日已签 · 连续 &#x27;+streak+&#x27; 天&#x27; : &#x27;连续签到 &#x27;+streak+&#x27;
+ 天 · 点击领取&#x27;;
+}
+const CK_COIN=[20,25,30,40,50,60,100];
+function doCheckin(){
+  const ck=save.checkin;
+  if(ck.date===dateKey()){ toast(&#x27;今天已经签到过啦&#x27;); return; }
+  ck.streak = (ck.date===yesterdayKey()) ? Math.min(7,(ck.streak||0)+1) : 1;
+  ck.date=dateKey();
+  let coin=CK_COIN[ck.streak-1];
+  if(save.pass) coin=coin*2+40;
+  save.coins+=coin;
+  let extra=&#x27;&#x27;;
+  if(ck.streak===7){ save.wool+=20; extra=&#x27; + 羊毛 20&#x27;; }
+  if(save.pass){
+    const k=[&#x27;shuffle&#x27;,&#x27;undo&#x27;,&#x27;out&#x27;][rnd(3)];
+    save.tools[k]++; extra+=&#x27; + 随机道具 ×1&#x27;;
+  }
+  persist(); SFX.coin();
+  toast(&#x27;签到成功！金币 +&#x27;+coin+extra);
+  renderCheckin(); updateChips();
+}
+
+/* =====================================================================
+   关卡地图
+   ===================================================================== */
+/* 地图最远能翻到哪一章：至少覆盖全部设计关卡，玩家打得更远时跟着延伸 */
+function maxMapChapter(){
+  return Math.max(Math.ceil(DESIGN_LV/CH_SIZE)-1, chapterIdx(Math.min(save.level,MAX_LEVEL)));
+}
+let mapCh=null;
+function renderLevels(ch){
+  if(ch==null) ch = (mapCh!=null?mapCh:chapterIdx(save.level));</pre></div><div class="ft">第 36 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>  ch=Math.max(0,Math.min(ch,maxMapChapter()));
+  mapCh=ch;
+  const first=ch*CH_SIZE+1;
+  applyChapter(first);
+  $(&#x27;#lv-title&#x27;).textContent=chapterTitle(first);
+  $(&#x27;#ch-prev&#x27;).style.visibility = ch&gt;0?&#x27;visible&#x27;:&#x27;hidden&#x27;;
+  $(&#x27;#ch-next&#x27;).style.visibility = ch&lt;maxMapChapter()?&#x27;visible&#x27;:&#x27;hidden&#x27;;
+
+  const map=$(&#x27;#lv-map&#x27;), H=1120;
+  map.style.height=H+&#x27;px&#x27;;
+  const pts=[];
+  for(let i=0;i&lt;CH_SIZE;i++){
+    const xp=(i%2===0)?20:60, yp=5+i*10;
+    pts.push({lv:first+i,xp,yp,x:xp/100*346,y:yp/100*H});
+  }
+  let d=&#x27;M &#x27;+pts[0].x.toFixed(1)+&#x27; &#x27;+pts[0].y.toFixed(1);
+  for(let i=1;i&lt;pts.length;i++){
+    const a=pts[i-1],b=pts[i];
+    const cx=(a.x+b.x)/2+(i%2?76:-76);
+    d+=&#x27; Q &#x27;+cx.toFixed(1)+&#x27; &#x27;+((a.y+b.y)/2).toFixed(1)+&#x27; &#x27;+b.x.toFixed(1)+&#x27; &#x27;+b.y.toFixed(1);
+  }
+  map.innerHTML=
+    &#x27;&lt;svg class=&quot;lv-path&quot; viewBox=&quot;0 0 346 &#x27;+H+&#x27;&quot; preserveAspectRatio=&quot;none&quot; fill=&quot;none&quot;&gt;&#x27;+
+      &#x27;&lt;path d=&quot;&#x27;+d+&#x27;&quot; stroke=&quot;var(--hill-a)&quot; stroke-width=&quot;15&quot; stroke-linecap=&quot;round&quot;/&gt;&#x27;+
+      &#x27;&lt;path d=&quot;&#x27;+d+&#x27;&quot; stroke=&quot;var(--hill-c)&quot; stroke-width=&quot;3.5&quot; stroke-dasharray=&quot;1 13&quot; stroke-
+linecap=&quot;round&quot;/&gt;&#x27;+
+    &#x27;&lt;/svg&gt;&#x27;+
+    &#x27;&lt;i class=&quot;fa-solid fa-leaf lv-leaf lf-1&quot;&gt;&lt;/i&gt;&lt;i class=&quot;fa-solid fa-seedling lv-leaf lf-2&quot;&gt;&lt;
+/i&gt;&#x27;+
+    &#x27;&lt;i class=&quot;fa-solid fa-leaf lv-leaf lf-3&quot;&gt;&lt;/i&gt;&lt;i class=&quot;fa-solid fa-tree lv-leaf lf-4&quot;&gt;&lt;/i&gt;&#x27;
++
+    &#x27;&lt;i class=&quot;fa-solid fa-leaf lv-leaf lf-5&quot;&gt;&lt;/i&gt;&#x27;;
+
+  pts.forEach(p=&gt;{
+    const lv=p.lv, st=save.stars[lv]||0;
+    const state = st&gt;0 ? &#x27;done&#x27; : (lv===save.level ? &#x27;current&#x27; : (lv&lt;save.level ? &#x27;open&#x27; : &#x27;lock
+&#x27;));
+    const b=document.createElement(&#x27;button&#x27;);
+    b.className=&#x27;lv-node &#x27;+state+(isBoss(lv)?&#x27; boss&#x27;:&#x27;&#x27;)+(isBonus(lv)?&#x27; bonus&#x27;:&#x27;&#x27;);
+    b.style.left=p.xp+&#x27;%&#x27;; b.style.top=p.yp+&#x27;%&#x27;;
+    let inner = state===&#x27;lock&#x27; ? &#x27;&lt;i class=&quot;fa-solid fa-lock&quot;&gt;&lt;/i&gt;&#x27;
+              : isBoss(lv)    ? &#x27;&lt;i class=&quot;fa-solid fa-crown&quot;&gt;&lt;/i&gt;&#x27;
+              : isBonus(lv)   ? &#x27;&lt;i class=&quot;fa-solid fa-box-open&quot;&gt;&lt;/i&gt;&#x27;
+              : st&gt;0          ? &#x27;&lt;i class=&quot;fa-solid fa-check&quot;&gt;&lt;/i&gt;&#x27; : String(lv);
+    if(st&gt;0) inner+=&#x27;&lt;span class=&quot;lv-star&quot;&gt;&#x27;+[1,2,3].map(k=&gt;&#x27;&lt;i class=&quot;fa-solid fa-star&#x27;+(k&lt;=st?
+&#x27;&#x27;:&#x27; off&#x27;)+&#x27;&quot;&gt;&lt;/i&gt;&#x27;).join(&#x27;&#x27;)+&#x27;&lt;/span&gt;&#x27;;
+    if(state===&#x27;current&#x27;) inner+=&#x27;&lt;span class=&quot;lv-tag&quot;&gt;进行中&lt;/span&gt;&#x27;;
+    else if(isBoss(lv)&amp;&amp;state!==&#x27;lock&#x27;) inner+=&#x27;&lt;span class=&quot;lv-tag&quot;&gt;BOSS 限时&lt;/span&gt;&#x27;;
+    else if(isBonus(lv)&amp;&amp;state!==&#x27;lock&#x27;) inner+=&#x27;&lt;span class=&quot;lv-tag&quot;&gt;宝箱关&lt;/span&gt;&#x27;;
+    inner+=&#x27;&lt;span class=&quot;lv-label&quot;&gt;&#x27;+lv+&#x27; · &#x27;+levelName(lv)+&#x27; · &#x27;+shapeOf(lv).n+&#x27;&lt;/span&gt;&#x27;;
+    b.innerHTML=inner;
+    b.onclick=()=&gt;{
+      if(state===&#x27;lock&#x27;){ toast(&#x27;通关第 &#x27;+(lv-1)+&#x27; 关后解锁&#x27;); SFX.deny(); return; }
+      enterLevel(lv);
+    };
+    map.appendChild(b);
+  });
+
+  /* 一只羊站在当前进度的节点上，解锁新关时会走过去 */
+  const curPt=pts.find(p=&gt;p.lv===save.level)||pts.find(p=&gt;!save.stars[p.lv]);</pre></div><div class="ft">第 37 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>  if(curPt){
+    const walker=document.createElement(&#x27;div&#x27;);
+    walker.className=&#x27;lv-walker&#x27;;
+    walker.innerHTML=&#x27;&lt;svg&gt;&lt;use href=&quot;#sheep&quot;/&gt;&lt;/svg&gt;&#x27;;
+    const from=pts.find(p=&gt;p.lv===save.level-1);
+    const startP=(save.lastWalk!==save.level&amp;&amp;from)?from:curPt;
+    walker.style.left=startP.xp+&#x27;%&#x27;; walker.style.top=(startP.yp)+&#x27;%&#x27;;
+    map.appendChild(walker);
+    if(startP!==curPt){
+      requestAnimationFrame(()=&gt;{
+        walker.style.left=curPt.xp+&#x27;%&#x27;; walker.style.top=curPt.yp+&#x27;%&#x27;;
+        walker.classList.add(&#x27;walking&#x27;);
+      });
+      setTimeout(()=&gt;walker.classList.remove(&#x27;walking&#x27;),1300);
+    }
+    save.lastWalk=save.level; persist();
+  }
+
+  const done=pts.filter(p=&gt;save.stars[p.lv]).length;
+  const total=Object.keys(save.stars).length;
+  $(&#x27;#lv-desc&#x27;).textContent=&#x27;本章已通关 &#x27;+done+&#x27; / &#x27;+CH_SIZE+&#x27; 关 · 累计 &#x27;+total+&#x27; 关&#x27;;
+  $(&#x27;#lv-num&#x27;).textContent=done+&#x27;/&#x27;+CH_SIZE;
+  $(&#x27;#lv-track&#x27;).style.width=(done/CH_SIZE*100)+&#x27;%&#x27;;
+  updateChips();
+}
+$(&#x27;#rk-seg&#x27;).addEventListener(&#x27;click&#x27;,e=&gt;{
+  const b=e.target.closest(&#x27;button&#x27;); if(!b) return;
+  rkTab=b.dataset.rk; renderRank();
+});
+$(&#x27;#ch-prev&#x27;).onclick=()=&gt;renderLevels(mapCh-1);
+$(&#x27;#ch-next&#x27;).onclick=()=&gt;renderLevels(mapCh+1);
+
+/* =====================================================================
+   商店
+   ===================================================================== */
+const PRICE={shuffle:120,undo:80,out:200};
+const TILE_SKINS={plain:{n:&#x27;清草&#x27;,cost:0},wood:{n:&#x27;木纹&#x27;,cost:150},cloud:{n:&#x27;云朵&#x27;,cost:260},nig
+ht:{n:&#x27;夜幕&#x27;,cost:400}};
+function renderShop(){
+  $$(&#x27;#s-shop .t-card&#x27;).forEach(c=&gt;{
+    c.querySelector(&#x27;.have-v&#x27;).textContent=save.tools[c.dataset.buy];
+    c.querySelector(&#x27;.t-price&#x27;).lastChild.textContent=Math.round(PRICE[c.dataset.buy]*priceMul()
+);
+  });
+  $(&#x27;#shop-wool&#x27;).textContent=fmt(save.wool);
+  $(&#x27;#wallet-wool&#x27;).textContent=fmt(save.wool);
+  /* 道具升级 */
+  const up=$(&#x27;#up-row&#x27;); up.innerHTML=&#x27;&#x27;;
+  Object.keys(TOOL_UP).forEach(k=&gt;{
+    const u=TOOL_UP[k], lv=toolLv(k), max=lv&gt;=3, cost=u.cost[lv]||0, poor=save.wool&lt;cost;
+    const el=document.createElement(&#x27;div&#x27;);
+    el.className=&#x27;up-item&#x27;;
+    el.innerHTML=&#x27;&lt;div class=&quot;u-ico&quot;&gt;&lt;i class=&quot;fa-solid &#x27;+u.ico+&#x27;&quot;&gt;&lt;/i&gt;&lt;/div&gt;&#x27;+
+      &#x27;&lt;div class=&quot;u-t&quot;&gt;&lt;b&gt;&#x27;+u.n+&#x27; Lv.&#x27;+lv+&#x27;&lt;/b&gt;&lt;span&gt;&#x27;+u.desc[lv-1]+&#x27;&lt;/span&gt;&#x27;+
+      &#x27;&lt;div class=&quot;u-lv&quot;&gt;&#x27;+[1,2,3].map(i=&gt;&#x27;&lt;i class=&quot;&#x27;+(i&lt;=lv?&#x27;on&#x27;:&#x27;&#x27;)+&#x27;&quot;&gt;&lt;/i&gt;&#x27;).join(&#x27;&#x27;)+&#x27;&lt;/div
+&gt;&lt;/div&gt;&#x27;+
+      &#x27;&lt;button class=&quot;u-buy&#x27;+(max?&#x27; max&#x27;:(poor?&#x27; poor&#x27;:&#x27;&#x27;))+&#x27;&quot;&gt;&#x27;+(max?&#x27;已满级&#x27;:&#x27;羊毛 &#x27;+cost)+&#x27;&lt;/
+button&gt;&#x27;;
+    el.querySelector(&#x27;.u-buy&#x27;).onclick=()=&gt;{
+      if(max){ toast(u.n+&#x27; 已经满级了&#x27;); return; }</pre></div><div class="ft">第 38 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>      if(save.wool&lt;cost){ toast(&#x27;羊毛不够，还差 &#x27;+(cost-save.wool)); SFX.deny(); return; }
+      save.wool-=cost; save.toolLv[k]=lv+1; persist(); SFX.coin();
+      toast(u.n+&#x27; 升到 Lv.&#x27;+(lv+1)+&#x27;：&#x27;+u.desc[lv]);
+      renderShop();
+    };
+    up.appendChild(el);
+  });
+  /* 牌面皮肤 */
+  save.tileOwned=save.tileOwned||[&#x27;plain&#x27;];
+  $$(&#x27;#skin-row .skin&#x27;).forEach(el=&gt;{
+    const k=el.dataset.tile, own=save.tileOwned.includes(k);
+    el.classList.toggle(&#x27;own&#x27;,own);
+    el.classList.toggle(&#x27;wear&#x27;,save.tileSkin===k);
+    el.querySelector(&#x27;.sk-tag&#x27;).textContent = save.tileSkin===k?&#x27;使用中&#x27;:(own?&#x27;点击使用&#x27;:&#x27;羊毛 &#x27;
++TILE_SKINS[k].cost);
+  });
+  updateChips();
+}
+$$(&#x27;#s-shop .t-card&#x27;).forEach(c=&gt;{
+  c.onclick=()=&gt;{
+    const k=c.dataset.buy, p=Math.round(PRICE[k]*priceMul());
+    if(save.coins&lt;p){ toast(&#x27;金币不足，先去通关攒点吧&#x27;); SFX.deny(); return; }
+    save.coins-=p; save.tools[k]++; persist(); SFX.coin();
+    toast(({shuffle:&#x27;洗牌&#x27;,undo:&#x27;撤回&#x27;,out:&#x27;移出&#x27;})[k]+&#x27; ×1 已放入背包&#x27;);
+    renderShop(); renderTools();
+  };
+});
+$$(&#x27;#skin-row .skin&#x27;).forEach(el=&gt;{
+  el.onclick=()=&gt;{
+    const k=el.dataset.tile;
+    save.tileOwned=save.tileOwned||[&#x27;plain&#x27;];
+    if(save.tileOwned.includes(k)){
+      save.tileSkin=k; persist(); applyTileSkin(); renderShop();
+      toast(&#x27;已换成「&#x27;+TILE_SKINS[k].n+&#x27;」牌面&#x27;); SFX.coin(); return;
+    }
+    if(save.wool&lt;TILE_SKINS[k].cost){ toast(&#x27;羊毛不够，还差 &#x27;+(TILE_SKINS[k].cost-save.wool)); S
+FX.deny(); return; }
+    save.wool-=TILE_SKINS[k].cost; save.tileOwned.push(k); save.tileSkin=k;
+    persist(); applyTileSkin(); renderShop(); SFX.coin();
+    toast(&#x27;兑换成功，牌面换成「&#x27;+TILE_SKINS[k].n+&#x27;」&#x27;);
+  };
+});
+function applyTileSkin(){
+  const cls=&#x27;tile-&#x27;+(save.tileSkin||&#x27;plain&#x27;);
+  [$(&#x27;#board&#x27;),...$$(&#x27;#queues .qrow&#x27;)].forEach(el=&gt;{
+    if(!el) return;
+    el.className=el.className.replace(/tile-\w+/g,&#x27;&#x27;).trim()+&#x27; &#x27;+cls;
+  });
+}
+function applySkin(){
+  const s=SHEEP_BY[save.skin];
+  const r=document.documentElement.style;
+  if(s){
+    r.setProperty(&#x27;--sheep-ink&#x27;,s.c[0]); r.setProperty(&#x27;--sheep-wool&#x27;,s.c[1]);
+    r.setProperty(&#x27;--sheep-face&#x27;,s.c[2]); r.setProperty(&#x27;--sheep-blush&#x27;,s.c[3]);
+    r.setProperty(&#x27;--sheep-ring&#x27;,s.c[4]);
+  }
+  document.body.classList.toggle(&#x27;cb&#x27;,!!save.cbMode);
+}
+</pre></div><div class="ft">第 39 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>
+/* =====================================================================
+   排行页
+   ---------------------------------------------------------------------
+   全部是真实的本地数据。原来那套地区榜/好友榜是设计稿留下的假数据，
+   没有服务端就只能是编的，留着只会拉低整页的可信度，已经删掉。
+   排行的意义建立在「同题可比」上：每日与周常全服同题，暗号让任意两人同题。
+   ===================================================================== */
+let rkTab=&#x27;best&#x27;;
+function renderRank(){
+  $(&#x27;#rk-name&#x27;).textContent=save.name;
+  $(&#x27;#rk-name&#x27;).setAttribute(&#x27;data-noi18n&#x27;,&#x27;&#x27;);  /* 昵称是用户数据，三语都原样显示 */
+  $(&#x27;#rk-title&#x27;).textContent=currentTitle();
+  /* 头部三个数字跟着当前面板走。原来固定是「通关/星星/消除组」，
+     和下面看的是哪个榜没有关系，而且三个数的口径互相打架：
+     cleared 是通关次数（重玩会 +1）却和纪录墙的「N 关有记录」并排，
+     matches 又不含无尽。现在每个面板自己带自己的口径 */
+  $(&#x27;#rk-stats&#x27;).innerHTML=rkStats().map(x=&gt;&#x27;&lt;div&gt;&lt;b&gt;&#x27;+x[0]+&#x27;&lt;/b&gt;&lt;span&gt;&#x27;+x[1]+&#x27;&lt;/span&gt;&lt;/div&gt;&#x27;).j
+oin(&#x27;&#x27;);
+  $$(&#x27;#rk-seg button&#x27;).forEach(b=&gt;b.classList.toggle(&#x27;on&#x27;,b.dataset.rk===rkTab));
+  /* 兜底：任何一个面板抛异常都不该让分段控件亮着新标签、内容却停在旧面板上。
+     宁可显示一句「读不出来」，也不要一个从此再也点不出来的死标签 */
+  let html;
+  try{ html=({best:rkBest,daily:rkDaily,endless:rkEndless,duel:rkDuel})[rkTab](); }
+  catch(e){ html=rkEmpty(&#x27;fa-triangle-exclamation&#x27;,&#x27;这一栏的记录读不出来&lt;br&gt;存档里的数据可能已损
+坏&#x27;); }
+  $(&#x27;#rk-panel&#x27;).innerHTML=storageWarn()+html;
+  updateChips();
+}
+/* 每个面板的头部口径：都只统计这个面板真正在比的东西 */
+function rkStats(){
+  try{
+    if(rkTab===&#x27;daily&#x27;){
+      const d=Object.keys(save.daily||{}), w=Object.keys(save.weekly||{});
+      const bt=d.map(k=&gt;save.daily[k].time).sort((a,b)=&gt;a-b)[0];
+      return [[d.length,&#x27;每日次数&#x27;],[w.length,&#x27;周常周数&#x27;],[bt?fmtTime(bt):&#x27;—&#x27;,&#x27;每日最佳&#x27;]];
+    }
+    if(rkTab===&#x27;endless&#x27;){
+      const log=save.endlessLog||[];
+      const wave=log.reduce((a,r)=&gt;Math.max(a,r.wave||0),0);
+      return [[fmt(save.endless||0),&#x27;最佳组数&#x27;],[wave||&#x27;—&#x27;,&#x27;最远波次&#x27;],[log.length,&#x27;场次&#x27;]];
+    }
+    if(rkTab===&#x27;duel&#x27;){
+      const d=save.duel||{win:0,lose:0}, t=d.win+d.lose;
+      return [[d.win,&#x27;胜&#x27;],[d.lose,&#x27;负&#x27;],[(t?Math.round(d.win/t*100):0)+&#x27;%&#x27;,&#x27;胜率&#x27;]];
+    }
+    const keys=[...new Set([...Object.keys(save.best||{}),...Object.keys(save.stars||{})])].map(
+Number).filter(n=&gt;n&gt;0);
+    const three=keys.filter(lv=&gt;(save.stars[lv]||0)&gt;=3).length;
+    const ft=keys.map(lv=&gt;(save.best[lv]||{}).time).filter(t=&gt;t&gt;0).sort((a,b)=&gt;a-b)[0];
+    return [[keys.length,&#x27;有记录&#x27;],[three,&#x27;三星关&#x27;],[ft?fmtTime(ft):&#x27;—&#x27;,&#x27;最快一关&#x27;]];
+  }catch(e){ return [[&#x27;—&#x27;,&#x27;&#x27;],[&#x27;—&#x27;,&#x27;&#x27;],[&#x27;—&#x27;,&#x27;&#x27;]]; }
+}
+const rkEmpty=(icon,txt)=&gt;&#x27;&lt;div class=&quot;rk-card&quot;&gt;&lt;div class=&quot;rk-empty&quot;&gt;&lt;i class=&quot;fa-solid &#x27;+icon+
+&#x27;&quot;&gt;&lt;/i&gt;&#x27;+txt+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;;
+const rkStars=n=&gt;&#x27;&lt;span class=&quot;rk-stars&quot;&gt;&#x27;+[1,2,3].map(k=&gt;&#x27;&lt;i class=&quot;fa-solid fa-star&#x27;+(k&lt;=n?&#x27;&#x27;:
+&#x27; off&#x27;)+&#x27;&quot;&gt;&lt;/i&gt;&#x27;).join(&#x27;&#x27;)+&#x27;&lt;/span&gt;&#x27;;
+
+/* 纪录墙：50 关的个人最佳，给已通关的关卡一个重玩理由
+   注意取并集：老存档只有 stars 没有 best（用时是后来才开始记的），</pre></div><div class="ft">第 40 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>   只看 best 会让「明明通了关却一条纪录都没有」，那是最容易被当成 bug 的空页 */
+function rkBest(){
+  const src=save.best||{}, st=save.stars||{};
+  const keys=[...new Set([...Object.keys(src),...Object.keys(st)])]
+    .map(Number).filter(n=&gt;n&gt;0).sort((a,b)=&gt;a-b);
+  if(!keys.length) return rkEmpty(&#x27;fa-medal&#x27;,&#x27;还没有任何纪录&lt;br&gt;通关一次就会记下你的用时与最高连
+击&#x27;);
+  const timed=keys.filter(lv=&gt;src[lv]&amp;&amp;src[lv].time&gt;0);
+  let html=&#x27;&#x27;, lastCh=-1;
+  keys.forEach(lv=&gt;{
+    const ch=chapterIdx(lv);
+    if(ch!==lastCh){ lastCh=ch; html+=&#x27;&lt;/div&gt;&lt;div class=&quot;rk-chapter&quot;&gt;&#x27;+chapterTitle(lv)+&#x27;&lt;/div&gt;&lt;
+div class=&quot;rk-card&quot;&gt;&#x27;; }
+    const b=src[lv]||{};
+    html+=&#x27;&lt;div class=&quot;rk-row&quot;&gt;&lt;span class=&quot;n&quot;&gt;&#x27;+lv+&#x27;&lt;/span&gt;&#x27;+
+      &#x27;&lt;span class=&quot;t&quot;&gt;&#x27;+levelName(lv)+&#x27;&lt;/span&gt;&#x27;+rkStars(st[lv]||0)+
+      &#x27;&lt;span class=&quot;v&quot;&gt;&#x27;+(b.time&gt;0?fmtTime(b.time)+&#x27;&lt;small&gt;×&#x27;+(b.combo||0)+&#x27;&lt;/small&gt;&#x27;:&#x27;&lt;span cla
+ss=&quot;dim&quot;&gt;未记录&lt;/span&gt;&#x27;)+&#x27;&lt;/span&gt;&lt;/div&gt;&#x27;;
+  });
+  html=html.replace(/^&lt;\/div&gt;/,&#x27;&#x27;)+&#x27;&lt;/div&gt;&#x27;;
+  let head=&#x27;&lt;div class=&quot;rk-card&quot;&gt;&lt;div class=&quot;c-hd&quot;&gt;&lt;b&gt;个人纪录墙&lt;/b&gt;&lt;span&gt;&#x27;+keys.length+&#x27; 关有记
+录&lt;/span&gt;&lt;/div&gt;&#x27;;
+  if(timed.length){
+    const fast=timed.reduce((a,lv)=&gt;!a||src[lv].time&lt;src[a].time?lv:a,0);
+    /* 取全局与墙上行的较大值：老存档里 st.bestCombo 可能比行里的数还小，
+       同屏出现「行 ×3 / 头部 ×0」比数字本身不准更显眼 */
+    const cb=timed.reduce((a,lv)=&gt;Math.max(a,src[lv].combo||0),save.st.bestCombo||0);
+    head+=&#x27;&lt;div class=&quot;rk-row&quot;&gt;&lt;span class=&quot;n&quot;&gt;&lt;i class=&quot;fa-solid fa-bolt&quot;&gt;&lt;/i&gt;&lt;/span&gt;&lt;span clas
+s=&quot;t&quot;&gt;最快的一关 · &#x27;+levelName(fast)+&#x27;&lt;/span&gt;&#x27;+
+      &#x27;&lt;span class=&quot;v&quot;&gt;&#x27;+fmtTime(src[fast].time)+&#x27;&lt;/span&gt;&lt;/div&gt;&#x27;+
+      &#x27;&lt;div class=&quot;rk-row&quot;&gt;&lt;span class=&quot;n&quot;&gt;&lt;i class=&quot;fa-solid fa-fire&quot;&gt;&lt;/i&gt;&lt;/span&gt;&lt;span class=&quot;t
+&quot;&gt;历史最高连击&lt;/span&gt;&#x27;+
+      &#x27;&lt;span class=&quot;v&quot;&gt;×&#x27;+cb+&#x27;&lt;/span&gt;&lt;/div&gt;&#x27;;
+  }else{
+    head+=&#x27;&lt;div class=&quot;rk-note&quot;&gt;这些关卡是在开始记录用时之前通的，重玩任意一关就会补上成绩&lt;/div&gt;
+&#x27;;
+  }
+  return head+&#x27;&lt;/div&gt;&#x27;+html;
+}
+/* 存档写不进去时（部分手机浏览器以本地文件打开会禁用 DOM 存储），
+   成绩只活在这一次会话里。不提示的话，玩家只会觉得「数据莫名其妙没了」 */
+function storageWarn(){
+  return STORAGE_OK?&#x27;&#x27;:&#x27;&lt;div class=&quot;rk-card&quot;&gt;&lt;div class=&quot;rk-empty&quot;&gt;&lt;i class=&quot;fa-solid fa-triangl
+e-exclamation&quot;&gt;&lt;/i&gt;&#x27;+
+    &#x27;当前浏览器禁止本地存档&lt;br&gt;成绩只保留到这个页面关闭为止，换用系统浏览器打开可解决&lt;/div&gt;&lt;/div
+&gt;&#x27;;
+}
+
+/* 每日：全服同题，所以「和自己的历史比」是有意义的 */
+function rkDaily(){
+  const d=save.daily||{};
+  const keys=Object.keys(d).sort((a,b)=&gt;b-a);
+  if(!keys.length) return rkEmpty(&#x27;fa-calendar-day&#x27;,&#x27;还没打过每日挑战&lt;br&gt;全服同一题面，成绩才有
+可比性&#x27;)+rkWeekly();
+  const today=String(dailySeed());
+  const mine=d[today];
+  const times=keys.map(k=&gt;d[k].time).sort((a,b)=&gt;a-b);
+  let head;
+  if(mine){
+    const rank=times.indexOf(mine.time)+1;</pre></div><div class="ft">第 41 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>    head=&#x27;&lt;div class=&quot;rk-big&quot;&gt;&#x27;+fmtTime(mine.time)+&#x27;&lt;small&gt;今日用时&lt;/small&gt;&lt;/div&gt;&#x27;+
+      &#x27;&lt;div class=&quot;rk-note&quot;&gt;这是你 &#x27;+keys.length+&#x27; 次每日挑战里第 &lt;b&gt;&#x27;+rank+&#x27;&lt;/b&gt; 快的一次&#x27;+
+      (rank===1?&#x27; —— 历史最佳！&#x27;:&#x27;&#x27;)+&#x27;　最高连击 ×&#x27;+(mine.combo||0)+&#x27;&lt;/div&gt;&#x27;;
+  }else{
+    head=&#x27;&lt;div class=&quot;rk-big&quot;&gt;--:--&lt;small&gt;今日未挑战&lt;/small&gt;&lt;/div&gt;&#x27;+
+      &#x27;&lt;div class=&quot;rk-note&quot;&gt;今天的题面全服一样，打完就能和自己的历史成绩比一比&lt;/div&gt;&#x27;;
+  }
+  const best=times[0];
+  const rows=keys.slice(0,10).map((k,i)=&gt;{
+    const r=d[k], y=k.slice(0,4), m=k.slice(4,6), dd=k.slice(6);
+    return &#x27;&lt;div class=&quot;rk-row&#x27;+(r.time===best?&#x27; gold&#x27;:&#x27;&#x27;)+&#x27;&quot;&gt;&lt;span class=&quot;n&quot;&gt;&#x27;+(k===today?&#x27;今&#x27;:
+(i+1))+&#x27;&lt;/span&gt;&#x27;+
+      &#x27;&lt;span class=&quot;t&quot;&gt;&#x27;+(+m)+&#x27;月&#x27;+(+dd)+&#x27;日&lt;/span&gt;&#x27;+
+      &#x27;&lt;span class=&quot;v&quot;&gt;&#x27;+fmtTime(r.time)+&#x27;&lt;small&gt;×&#x27;+(r.combo||0)+&#x27;&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&#x27;;
+  }).join(&#x27;&#x27;);
+  return &#x27;&lt;div class=&quot;rk-card&quot;&gt;&#x27;+head+&#x27;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;rk-card&quot;&gt;&lt;div class=&quot;c-hd&quot;&gt;&lt;b&gt;最近成绩&lt;/b&gt;&lt;span&gt;累计 &#x27;+keys.length+&#x27; 次 · 最佳 
+&#x27;+fmtTime(best)+&#x27;&lt;/span&gt;&lt;/div&gt;&#x27;+rows+&#x27;&lt;/div&gt;&#x27;+
+    rkWeekly();
+}
+
+/* 周常成绩原来只写不读：存了一堆数据，玩家却只能在当次结算页看一眼 */
+function rkWeekly(){
+  const w=save.weekly||{};
+  const keys=Object.keys(w).map(Number).filter(n=&gt;n&gt;0).sort((a,b)=&gt;b-a);
+  if(!keys.length) return &#x27;&#x27;;
+  const now=weekIndex();
+  const rows=keys.slice(0,8).map((k,i)=&gt;{
+    const r=w[k], mod=WEEKLY[k%WEEKLY.length];
+    return &#x27;&lt;div class=&quot;rk-row&#x27;+(k===now?&#x27; gold&#x27;:&#x27;&#x27;)+&#x27;&quot;&gt;&lt;span class=&quot;n&quot;&gt;&#x27;+(i+1)+&#x27;&lt;/span&gt;&#x27;+
+      &#x27;&lt;span class=&quot;t&quot;&gt;&#x27;+(k===now?&#x27;本周&#x27;:(now-k)+&#x27;周前&#x27;)+&#x27; · &#x27;+(mod?mod.n:&#x27;周常&#x27;)+&#x27;&lt;/span&gt;&#x27;+
+      &#x27;&lt;span class=&quot;v&quot;&gt;&#x27;+fmtTime(r.time)+&#x27;&lt;small&gt;×&#x27;+(r.combo||0)+&#x27;&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&#x27;;
+  }).join(&#x27;&#x27;);
+  return &#x27;&lt;div class=&quot;rk-card&quot;&gt;&lt;div class=&quot;c-hd&quot;&gt;&lt;b&gt;周常挑战&lt;/b&gt;&lt;span&gt;共 &#x27;+keys.length+&#x27; 周&lt;/spa
+n&gt;&lt;/div&gt;&#x27;+rows+
+    &#x27;&lt;div class=&quot;rk-note&quot;&gt;周常每周一换一套变体规则，同一周内全服规则相同&lt;/div&gt;&lt;/div&gt;&#x27;;
+}
+
+/* 无尽：不需要同题就天然可比 */
+function rkEndless(){
+  const log=save.endlessLog||[];
+  /* 判据不能只看 save.endless：首波 0 组失败时它保持 0，
+     但 endlessLog 已经记了一条 —— 玩家打完看到「还没玩过」，那条记录像是丢了 */
+  if(!save.endless&amp;&amp;!log.length) return rkEmpty(&#x27;fa-infinity&#x27;,&#x27;还没玩过无尽草原&lt;br&gt;一波清完接下
+一波，比谁消得多&#x27;);
+  const rows=log.length? log.map((r,i)=&gt;
+    &#x27;&lt;div class=&quot;rk-row&#x27;+(r.score===save.endless?&#x27; gold&#x27;:&#x27;&#x27;)+&#x27;&quot;&gt;&lt;span class=&quot;n&quot;&gt;&#x27;+(i+1)+&#x27;&lt;/span&gt;
+&#x27;+
+    &#x27;&lt;span class=&quot;t&quot;&gt;第 &#x27;+r.wave+&#x27; 波结束&lt;/span&gt;&#x27;+
+    &#x27;&lt;span class=&quot;v&quot;&gt;&#x27;+r.score+&#x27;&lt;small&gt;组&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&#x27;).join(&#x27;&#x27;)
+    : &#x27;&lt;div class=&quot;rk-empty&quot;&gt;还没有历史记录&lt;/div&gt;&#x27;;
+  return &#x27;&lt;div class=&quot;rk-card&quot;&gt;&lt;div class=&quot;rk-big&quot;&gt;&#x27;+save.endless+&#x27;&lt;small&gt;组 · 历史最佳&lt;/small&gt;&lt;
+/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;rk-note&quot;&gt;无尽模式每波都会更难，撑到第几波取决于你的取牌顺序&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;rk-card&quot;&gt;&lt;div class=&quot;c-hd&quot;&gt;&lt;b&gt;最近 &#x27;+log.length+&#x27; 次&lt;/b&gt;&lt;span&gt;最多保留 10 条&lt;/s
+pan&gt;&lt;/div&gt;&#x27;+rows+&#x27;&lt;/div&gt;&#x27;;
+}
+
+/* 对战：暗号带上成绩就是一封战书，零服务端的异步 PK */
+function rkDuel(){</pre></div><div class="ft">第 42 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>  const d=save.duel||{win:0,lose:0,log:[]};
+  const total=d.win+d.lose;
+  const rate=total?Math.round(d.win/total*100):0;
+  const rows=(d.log||[]).length? d.log.map(r=&gt;
+    &#x27;&lt;div class=&quot;rk-row &#x27;+(r.win?&#x27;win&#x27;:&#x27;lose&#x27;)+&#x27;&quot;&gt;&lt;span class=&quot;n&quot;&gt;&#x27;+(r.win?&#x27;胜&#x27;:&#x27;负&#x27;)+&#x27;&lt;/span&gt;&#x27;+
+    &#x27;&lt;span class=&quot;t&quot;&gt;第 &#x27;+r.lv+&#x27; 关 · &#x27;+levelName(r.lv)+&#x27;&lt;/span&gt;&#x27;+
+    &#x27;&lt;span class=&quot;v&quot;&gt;&#x27;+fmtTime(r.mine)+&#x27;&lt;small&gt;对 &#x27;+fmtTime(r.theirs)+&#x27;&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&#x27;).j
+oin(&#x27;&#x27;)
+    : &#x27;&lt;div class=&quot;rk-empty&quot;&gt;还没有对战记录&lt;/div&gt;&#x27;;
+  /* 胜负胜率已经在头部卡片里，这里不再重复一遍 */
+  return &#x27;&lt;div class=&quot;rk-card&quot;&gt;&lt;div class=&quot;c-hd&quot;&gt;&lt;b&gt;怎么发起对战&lt;/b&gt;&#x27;+
+    (total?&#x27;&lt;span&gt;共 &#x27;+total+&#x27; 场 · 胜率 &#x27;+rate+&#x27;%&lt;/span&gt;&#x27;:&#x27;&#x27;)+&#x27;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;rk-note&quot;&gt;通关后在结算页点「把这局的暗号分享给朋友」，暗号会&lt;b&gt;带上你的成绩&lt;/b&gt;
+。&#x27;+
+    &#x27;对方在首页输入这串暗号，会拿到一模一样的盘面，并且开局就看得到要追的目标 —— 通关时自动判胜
+负。&lt;br&gt;&#x27;+
+    &#x27;整个过程不需要联网，成绩就编码在那串字符里。&lt;br&gt;&#x27;+
+    &#x27;&lt;b&gt;只有通关的对局才计入胜负&lt;/b&gt;：没打过去、或中途重开新盘面，都不算负，所以上面的胜率天然偏
+高。&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;rk-card&quot;&gt;&lt;div class=&quot;c-hd&quot;&gt;&lt;b&gt;最近对战&lt;/b&gt;&lt;span&gt;最多保留 20 条&lt;/span&gt;&lt;/div&gt;&#x27;+ro
+ws+&#x27;&lt;/div&gt;&#x27;;
+}
+
+/* =====================================================================
+   图鉴 / 牧场 / 成就
+   ===================================================================== */
+function renderDex(){
+  const own=Object.keys(save.dex||{});
+  $(&#x27;#dex-count&#x27;).textContent=own.length+&#x27; / &#x27;+SHEEP.length;
+  renderDexEx(own.length);
+  const cur=activeSheep();
+  $(&#x27;#dex-cur&#x27;).innerHTML = cur
+    ? &#x27;&lt;svg style=&quot;&#x27;+sheepStyle(cur)+&#x27;&quot;&gt;&lt;use href=&quot;#sheep&quot;/&gt;&lt;/svg&gt;&#x27;+
+      &#x27;&lt;div class=&quot;c-info&quot;&gt;&lt;b&gt;出战：&#x27;+cur.n+&#x27; · Lv.&#x27;+sheepLv(cur.id)+&#x27;&lt;/b&gt;&#x27;+
+      &#x27;&lt;span&gt;&#x27;+PASSIVE_TXT[cur.p.t](Math.round(cur.p.v*sheepMul(cur.id)))+&#x27;&lt;/span&gt;&#x27;+
+      &#x27;&lt;span class=&quot;c-story&quot;&gt;「&#x27;+cur.s+&#x27;」&lt;/span&gt;&lt;/div&gt;&#x27;
+    : &#x27;&lt;svg&gt;&lt;use href=&quot;#sheep&quot;/&gt;&lt;/svg&gt;&lt;div class=&quot;c-info&quot;&gt;&lt;b&gt;还没有出战的羊&lt;/b&gt;&lt;span&gt;通关有几率
+遇到新羊，点下面的头像即可出战&lt;/span&gt;&lt;/div&gt;&#x27;;
+  const g=$(&#x27;#dex-grid&#x27;); g.innerHTML=&#x27;&#x27;;
+  SHEEP.forEach(s=&gt;{
+    const has=!!(save.dex&amp;&amp;save.dex[s.id]);
+    const lv=sheepLv(s.id);
+    const d=document.createElement(&#x27;div&#x27;);
+    d.className=&#x27;dex-cell&#x27;+(has?&#x27;&#x27;:&#x27; lock&#x27;)+(save.skin===s.id&amp;&amp;has?&#x27; on&#x27;:&#x27;&#x27;);
+    d.innerHTML=&#x27;&lt;span class=&quot;rr r&#x27;+s.r+&#x27;&quot;&gt;&#x27;+RARITY[s.r]+&#x27;&lt;/span&gt;&#x27;+
+      &#x27;&lt;svg style=&quot;&#x27;+sheepStyle(s)+&#x27;&quot;&gt;&lt;use href=&quot;#sheep&quot;/&gt;&lt;/svg&gt;&#x27;+
+      &#x27;&lt;b&gt;&#x27;+(has?s.n:&#x27;？？？&#x27;)+&#x27;&lt;/b&gt;&#x27;+
+      &#x27;&lt;span class=&quot;lvtag&quot;&gt;&#x27;+(has?(&#x27;Lv.&#x27;+lv+&#x27; · &#x27;+PASSIVE_TXT[s.p.t](Math.round(s.p.v*sheepMul(s
+.id)))):&#x27;未收集&#x27;)+&#x27;&lt;/span&gt;&#x27;+
+      &#x27;&lt;span class=&quot;shard&quot;&gt;&#x27;+(has&amp;&amp;save.dex[s.id].s?&#x27;碎片 &#x27;+save.dex[s.id].s:&#x27;&#x27;)+&#x27;&lt;/span&gt;&#x27;;
+    d.onclick=()=&gt;{
+      if(!has){ toast(&#x27;还没遇到这只羊，多通几关试试&#x27;); SFX.deny(); return; }
+      save.skin=s.id; persist(); applySkin(); renderDex(); SFX.coin();
+      toast(s.n+&#x27;：&#x27;+s.s);
+    };
+    g.appendChild(d);
+  });
+  updateChips();
+}
+/* =====================================================================</pre></div><div class="ft">第 43 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>   玩法说明
+   ---------------------------------------------------------------------
+   特殊牌原本只有「第一次遇到时弹一次」的教学（#spMask），弹完就再也找不回来，
+   而炸弹倒数、锁链组数这类规则恰恰是要回头查的。这里把牌面、道具、
+   关卡目标、四种模式集中成一页常驻手册，文案直接取自 SPECIALS / TOOL_UP，
+   不另抄一份，免得规则改了说明还停在旧版
+   ===================================================================== */
+const HELP_BASE=[
+  [&#x27;fa-layer-group&#x27;,&#x27;怎么算赢&#x27;,&#x27;点击盘面上没被压住的牌，它会飞进下方卡槽；卡槽里凑齐 3 张同花色
+自动消除。把盘面、卡槽、彩虹槽全部清空就算过关。&#x27;],
+  [&#x27;fa-table-columns&#x27;,&#x27;卡槽只有 7 格&#x27;,&#x27;卡槽塞满且没有任何三连时判负。这是唯一的失败方式（限时与
+限步关卡另算）。周常变体会把格子改成 5 格或 9 格。&#x27;],
+  [&#x27;fa-box-open&#x27;,&#x27;底部牌堆&#x27;,&#x27;盘面下方的牌堆只能取最前面一张；少数关卡的牌堆是双向的，两端都能取
+。&#x27;],
+  [&#x27;fa-clover&#x27;,&#x27;必定有解&#x27;,&#x27;每一局都是先算出一条合法的通关顺序，再沿着它铺花色和特殊牌 —— 有解是
+构造出来的，不是碰运气。卡在死局只会是取牌顺序的问题，失败页可以直接看参考解法回放。&#x27;]
+];
+const HELP_MODES=[
+  /* 章节数按 CHAPTERS.length 说：50 关 ÷ CH_SIZE(10) = 5 章，原来写的「四个章节」
+     与 CHAPTERS 里实际的五个章节对不上。宝箱关 isBonus 排除了前 12 关，第一章没有 */
+  [&#x27;fa-map&#x27;,&#x27;闯关&#x27;,&#x27;50 关，五个章节。每章第 10 关是 BOSS 关；第二章起每章第 5 关是宝箱关，金币翻
+倍、必掉图鉴。&#x27;],
+  [&#x27;fa-calendar-day&#x27;,&#x27;每日挑战&#x27;,&#x27;全服同一套题面，每天换一次。因为同题，成绩才有可比性。&#x27;],
+  [&#x27;fa-calendar-week&#x27;,&#x27;周常挑战&#x27;,&#x27;每周一换一套变体规则（窄槽、迷雾、爆破等），同一周内全服相同。
+&#x27;],
+  [&#x27;fa-infinity&#x27;,&#x27;无尽草原&#x27;,&#x27;一波清完接下一波，每波更难，中途可选增益。比的是累计消除组数。&#x27;]
+];
+function renderHelp(){
+  const box=$(&#x27;#help-body&#x27;); if(!box) return;
+  const card=(title,rows)=&gt;&#x27;&lt;div class=&quot;hp-card&quot;&gt;&lt;div class=&quot;hp-hd&quot;&gt;&#x27;+title+&#x27;&lt;/div&gt;&#x27;+rows+&#x27;&lt;/div
+&gt;&#x27;;
+  const row=(ico,name,tip,extra)=&gt;&#x27;&lt;div class=&quot;hp-row&quot;&gt;&lt;div class=&quot;hp-ico&quot;&gt;&lt;i class=&quot;fa-solid &#x27;+
+ico+&#x27;&quot;&gt;&lt;/i&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;hp-t&quot;&gt;&lt;b&gt;&#x27;+name+&#x27;&lt;/b&gt;&lt;span&gt;&#x27;+tip+&#x27;&lt;/span&gt;&lt;/div&gt;&#x27;+(extra||&#x27;&#x27;)+&#x27;&lt;/div&gt;&#x27;;
+
+  let html=card(&#x27;基本规则&#x27;, HELP_BASE.map(r=&gt;row(r[0],r[1],r[2])).join(&#x27;&#x27;));
+
+  /* 规则牌与奖励牌分开：前者会改变消除顺序，后者只在被消掉时给东西 */
+  const rule=[&#x27;freeze&#x27;,&#x27;chain&#x27;,&#x27;dbl&#x27;,&#x27;rain&#x27;,&#x27;bomb&#x27;,&#x27;mystery&#x27;,&#x27;supply&#x27;];
+  const reward=[&#x27;coin&#x27;,&#x27;wool&#x27;,&#x27;gift&#x27;,&#x27;torch&#x27;];
+  const seen=save.seenSp||[];
+  const spRow=k=&gt;{
+    const s=SPECIALS[k];
+    return row(s.icon, s.name, s.tip, seen.includes(k)?&#x27;&lt;span class=&quot;hp-tag&quot;&gt;已遇到&lt;/span&gt;&#x27;:&#x27;&#x27;);
+  };
+  html+=card(&#x27;规则牌 &lt;span&gt;会改变取牌顺序&lt;/span&gt;&#x27;, rule.map(spRow).join(&#x27;&#x27;));
+  html+=card(&#x27;奖励牌 &lt;span&gt;只在被消掉时给东西&lt;/span&gt;&#x27;, reward.map(spRow).join(&#x27;&#x27;));
+
+  html+=card(&#x27;道具 &lt;span&gt;可在商店升级&lt;/span&gt;&#x27;, Object.keys(TOOL_UP).map(k=&gt;{
+    const t=TOOL_UP[k], lv=toolLv(k);
+    return row(t.ico, t.n+&#x27; · Lv.&#x27;+lv, t.desc[lv-1]+&#x27;。&#x27;+
+      (k===&#x27;shuffle&#x27;?&#x27;洗出来的一定还是有解的局面，洗不出就不消耗道具。&#x27;:
+       k===&#x27;undo&#x27;?&#x27;把最近入槽的牌退回原位，炸弹倒数也会跟着重置。&#x27;:
+       &#x27;把卡槽里的牌临时挪出去，给三连腾地方。&#x27;),
+      lv&lt;3?&#x27;&lt;span class=&quot;hp-tag dim&quot;&gt;可升级&lt;/span&gt;&#x27;:&#x27;&lt;span class=&quot;hp-tag&quot;&gt;满级&lt;/span&gt;&#x27;);
+  }).join(&#x27;&#x27;));
+
+  html+=card(&#x27;关卡目标 &lt;span&gt;闯关模式&lt;/span&gt;&#x27;,
+    [[&#x27;fa-check&#x27;,&#x27;清空全部&#x27;,&#x27;把盘面、卡槽、彩虹槽全部清空&#x27;],
+     [&#x27;fa-hashtag&#x27;,&#x27;限步&#x27;,&#x27;在限定步数内消够指定组数&#x27;],</pre></div><div class="ft">第 44 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>     [&#x27;fa-bullseye&#x27;,&#x27;指定花色&#x27;,&#x27;消掉指定组数的某一种花色&#x27;],
+     [&#x27;fa-layer-group&#x27;,&#x27;剥层&#x27;,&#x27;清掉最上面四层的指定张数&#x27;],
+     [&#x27;fa-paw&#x27;,&#x27;救援&#x27;,&#x27;把被压在最底下的小羊挖出来&#x27;],
+     [&#x27;fa-hourglass-half&#x27;,&#x27;限时&#x27;,&#x27;在限定秒数内消够指定组数&#x27;]].map(r=&gt;row(r[0],r[1],r[2])).join(&#x27;
+&#x27;));
+
+  html+=card(&#x27;模式&#x27;, HELP_MODES.map(r=&gt;row(r[0],r[1],r[2])).join(&#x27;&#x27;));
+  /* 第三方署名：图标字体是 CC BY 4.0，许可要求署名，且要放在用户看得到的地方 */
+  html+=card(&#x27;关于&#x27;, row(&#x27;fa-circle-info&#x27;,&#x27;羊羊羊之草原牧歌 V1.0&#x27;,&#x27;单文件网页实现，全部资源内嵌
+，运行期间不请求任何外部资源。&#x27;)+
+    row(&#x27;fa-tag&#x27;,&#x27;图标字体 Font Awesome 6 Free&#x27;,&#x27;Copyright (c) Fonticons, Inc.　字体依 SIL OFL 1
+.1、图标依 CC BY 4.0 授权，本软件仅嵌入使用，未修改其字形。&#x27;));
+  box.innerHTML=html;
+}
+
+/* 碎片兑换 + 保底进度 + 全收集奖励，都放在图鉴顶部 */
+function renderDexEx(ownN){
+  const box=$(&#x27;#dex-ex&#x27;); if(!box) return;
+  if(dexFull()){
+    box.className=&#x27;dex-ex full&#x27;;
+    box.innerHTML=&#x27;&lt;div class=&quot;ex-hd&quot;&gt;&lt;b&gt;&lt;i class=&quot;fa-solid fa-crown&quot;&gt;&lt;/i&gt; 图鉴全满&lt;/b&gt;&#x27;+
+      &#x27;&lt;span&gt;金币与羊毛产出 +5%（已生效）&lt;/span&gt;&lt;/div&gt;&#x27;;
+    return;
+  }
+  box.className=&#x27;dex-ex&#x27;;
+  const sp=surplusShards(), left=Math.max(0,PITY_N-(save.pity||0));
+  const btns=[1,2,3].map(r=&gt;{
+    const fresh=SHEEP.filter(s=&gt;s.r===r&amp;&amp;!(save.dex||{})[s.id]).length;
+    const cost=EXCHANGE[r], can=fresh&amp;&amp;sp&gt;=cost;
+    return &#x27;&lt;button class=&quot;ex-b&#x27;+(can?&#x27;&#x27;:&#x27; off&#x27;)+&#x27;&quot; data-ex=&quot;&#x27;+r+&#x27;&quot;&gt;&#x27;+
+      &#x27;&lt;b&gt;&#x27;+RARITY[r]+&#x27;&lt;/b&gt;&lt;span&gt;&#x27;+(fresh?cost+&#x27; 片&#x27;:&#x27;已集齐&#x27;)+&#x27;&lt;/span&gt;&lt;/button&gt;&#x27;;
+  }).join(&#x27;&#x27;);
+  box.innerHTML=&#x27;&lt;div class=&quot;ex-hd&quot;&gt;&lt;b&gt;&lt;i class=&quot;fa-solid fa-puzzle-piece&quot;&gt;&lt;/i&gt; 富余碎片 &#x27;+sp+&#x27;&lt;
+/b&gt;&#x27;+
+    &#x27;&lt;span&gt;满级羊多出来的碎片可以换缺的羊&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;ex-row&quot;&gt;&#x27;+btns+&#x27;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;ex-note&quot;&gt;再有 &#x27;+left+&#x27; 次重复掉落必出新羊&lt;/div&gt;&#x27;;
+  box.querySelectorAll(&#x27;[data-ex]&#x27;).forEach(b=&gt;b.onclick=()=&gt;exchangeSheep(+b.dataset.ex));
+}
+function renderFarm(){
+  $(&#x27;#farm-wool&#x27;).textContent=fmt(save.wool);
+  const total=Object.values(save.farm||{}).reduce((a,b)=&gt;a+b,0);
+  $(&#x27;#farm-title&#x27;).textContent = total&gt;=20?&#x27;丰饶牧场&#x27; : total&gt;=12?&#x27;像样的牧场&#x27; : total&gt;=5?&#x27;初具
+规模&#x27; : &#x27;草原一角&#x27;;
+  $(&#x27;#farm-sub&#x27;).textContent=&#x27;建设等级合计 &#x27;+total+&#x27; / 20 · 金币 +&#x27;+(farmLv(&#x27;grass&#x27;)*2)+&#x27;% · 羊
+毛 +&#x27;+(farmLv(&#x27;mill&#x27;)*2)+&#x27;%&#x27;;
+  const list=$(&#x27;#farm-list&#x27;); list.innerHTML=&#x27;&#x27;;
+  FARM.forEach(f=&gt;{
+    const lv=farmLv(f.id), max=lv&gt;=f.max, cost=f.cost(lv), poor=save.wool&lt;cost;
+    const el=document.createElement(&#x27;div&#x27;);
+    el.className=&#x27;farm-item&#x27;;
+    el.innerHTML=&#x27;&lt;div class=&quot;f-ico&quot;&gt;&lt;i class=&quot;fa-solid &#x27;+f.ico+&#x27;&quot;&gt;&lt;/i&gt;&lt;/div&gt;&#x27;+
+      &#x27;&lt;div class=&quot;f-info&quot;&gt;&lt;b&gt;&#x27;+f.n+&#x27; Lv.&#x27;+lv+&#x27;&lt;/b&gt;&lt;span&gt;&#x27;+f.desc(lv)+(max?&#x27;&#x27;:&#x27; → &#x27;+f.desc(lv+1)
+)+&#x27;&lt;/span&gt;&#x27;+
+      &#x27;&lt;div class=&quot;f-bar&quot;&gt;&#x27;+Array.from({length:f.max},(_,i)=&gt;&#x27;&lt;i class=&quot;&#x27;+(i&lt;lv?&#x27;on&#x27;:&#x27;&#x27;)+&#x27;&quot;&gt;&lt;/i&gt;
+&#x27;).join(&#x27;&#x27;)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;+
+      &#x27;&lt;button class=&quot;f-buy&#x27;+(max?&#x27; max&#x27;:(poor?&#x27; poor&#x27;:&#x27;&#x27;))+&#x27;&quot;&gt;&#x27;+(max?&#x27;已满&#x27;:&#x27;升级&#x27;)+
+      (max?&#x27;&#x27;:&#x27;&lt;small&gt;羊毛 &#x27;+cost+&#x27;&lt;/small&gt;&#x27;)+&#x27;&lt;/button&gt;&#x27;;
+    el.querySelector(&#x27;.f-buy&#x27;).onclick=()=&gt;{
+      if(max){ toast(f.n+&#x27; 已经建满了&#x27;); return; }
+      if(save.wool&lt;cost){ toast(&#x27;羊毛不够，还差 &#x27;+(cost-save.wool)); SFX.deny(); return; }</pre></div><div class="ft">第 45 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>      save.wool-=cost; save.farm[f.id]=lv+1; persist(); SFX.coin();
+      toast(f.n+&#x27; 升到 Lv.&#x27;+(lv+1)+&#x27;！&#x27;+f.desc(lv+1));
+      checkAch(); renderFarm();
+    };
+    list.appendChild(el);
+  });
+  updateChips();
+}
+function renderAch(){
+  save.ach=save.ach||[];
+  $(&#x27;#ach-count&#x27;).textContent=save.ach.length+&#x27; / &#x27;+ACH.length;
+  const list=$(&#x27;#ach-list&#x27;); list.innerHTML=&#x27;&#x27;;
+  ACH.forEach(a=&gt;{
+    const got=save.ach.includes(a[0]);
+    const el=document.createElement(&#x27;div&#x27;);
+    el.className=&#x27;ach-item&#x27;+(got?&#x27; got&#x27;:&#x27;&#x27;);
+    el.innerHTML=&#x27;&lt;div class=&quot;a-ico&quot;&gt;&lt;i class=&quot;fa-solid &#x27;+(got?&#x27;fa-medal&#x27;:&#x27;fa-lock&#x27;)+&#x27;&quot;&gt;&lt;/i&gt;&lt;/di
+v&gt;&#x27;+
+      &#x27;&lt;div class=&quot;a-t&quot;&gt;&lt;b&gt;&#x27;+a[1]+&#x27;&lt;/b&gt;&lt;span&gt;&#x27;+a[2]+&#x27;&lt;/span&gt;&lt;/div&gt;&#x27;+
+      &#x27;&lt;span class=&quot;a-w&quot;&gt;羊毛 &#x27;+a[4]+&#x27;&lt;/span&gt;&#x27;;
+    list.appendChild(el);
+  });
+  updateChips();
+}
+
+/* =====================================================================
+   我的
+   ===================================================================== */
+function renderMine(){
+  /* 语言胶囊：文案本身不参与翻译（各语言都显示自己的名字），所以直接写死 */
+  const lp=$(&#x27;#lang-pick&#x27;);
+  if(lp){
+    lp.innerHTML=LANGS.map(([k,label])=&gt;
+      &#x27;&lt;b data-lang=&quot;&#x27;+k+&#x27;&quot;&#x27;+((save.lang||&#x27;zh&#x27;)===k?&#x27; class=&quot;on&quot;&#x27;:&#x27;&#x27;)+&#x27;&gt;&#x27;+label+&#x27;&lt;/b&gt;&#x27;).join(&#x27;&#x27;)
+;
+  }
+
+  $(&#x27;#me-name&#x27;).textContent=save.name;
+  $(&#x27;#me-name&#x27;).setAttribute(&#x27;data-noi18n&#x27;,&#x27;&#x27;);  /* 昵称是用户数据，任何语言下都原样显示 */
+  $(&#x27;#me-lv&#x27;).textContent=&#x27;青草认证牧羊人 · Lv.&#x27;+Math.min(99,1+Math.floor(save.cleared/2));
+  $(&#x27;#me-title&#x27;).textContent=currentTitle();
+  $(&#x27;#st-coin&#x27;).textContent=fmt(save.coins);
+  $(&#x27;#st-wool&#x27;).textContent=fmt(save.wool);
+  $(&#x27;#st-lv&#x27;).textContent=save.level;
+  $(&#x27;#badge-sub&#x27;).textContent=&#x27;已解锁 &#x27;+(save.ach||[]).length+&#x27; / &#x27;+ACH.length+&#x27; 枚&#x27;;
+  $(&#x27;#badge-n&#x27;).textContent=(save.ach||[]).length;
+  $(&#x27;#bag-sub&#x27;).textContent=&#x27;已收集 &#x27;+Object.keys(save.dex||{}).length+&#x27; / &#x27;+SHEEP.length+
+    (activeSheep()?(&#x27; · 出战 &#x27;+activeSheep().n):&#x27;&#x27;);
+  $(&#x27;#farm-row-sub&#x27;).textContent=&#x27;建设等级 &#x27;+Object.values(save.farm||{}).reduce((a,b)=&gt;a+b,0)+&#x27;
+ / 20&#x27;;
+  document.addEventListener(&#x27;click&#x27;,e=&gt;{
+  const b=e.target.closest(&#x27;#lang-pick b&#x27;);
+  if(!b) return;
+  setLang(b.dataset.lang);
+  SFX.tap&amp;&amp;SFX.tap();
+});
+$$(&#x27;#s-mine [data-toggle]&#x27;).forEach(row=&gt;{
+    row.querySelector(&#x27;.switch&#x27;).classList.toggle(&#x27;on&#x27;,!!save[row.dataset.toggle]);
+  });
+  updateChips();</pre></div><div class="ft">第 46 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>}
+$$(&#x27;#s-mine [data-toggle]&#x27;).forEach(row=&gt;{
+  row.onclick=()=&gt;{
+    const k=row.dataset.toggle;
+    save[k]=!save[k]; persist();
+    row.querySelector(&#x27;.switch&#x27;).classList.toggle(&#x27;on&#x27;,save[k]);
+    if(k===&#x27;sound&#x27;){ $(&#x27;#btn-sound&#x27;).innerHTML=&#x27;&lt;i class=&quot;fa-solid &#x27;+(save.sound?&#x27;fa-volume-high
+&#x27;:&#x27;fa-volume-xmark&#x27;)+&#x27;&quot;&gt;&lt;/i&gt;&#x27;; if(save.sound) SFX.pick(); }
+    if(k===&#x27;vibrate&#x27;&amp;&amp;save.vibrate) buzz(30);
+    if(k===&#x27;cbMode&#x27;) applySkin();
+    if(k===&#x27;bgm&#x27;){ save.bgm?BGM.start():BGM.stop(); }
+    toast(({sound:&#x27;音效&#x27;,vibrate:&#x27;震动反馈&#x27;,bgm:&#x27;背景音乐&#x27;,cbMode:&#x27;色觉辅助&#x27;})[k]+(save[k]?&#x27; 已
+开启&#x27;:&#x27; 已关闭&#x27;));
+  };
+});
+$(&#x27;#me-edit&#x27;).onclick=()=&gt;{
+  const n=prompt(&#x27;给自己取个名字吧&#x27;,save.name);
+  if(n&amp;&amp;n.trim()){ save.name=n.trim().slice(0,10); persist(); renderMine(); toast(&#x27;名字已更新&#x27;);
+ }
+};
+$(&#x27;#row-badge&#x27;).onclick=()=&gt;go(&#x27;s-ach&#x27;);
+$(&#x27;#row-bag&#x27;).onclick=()=&gt;go(&#x27;s-dex&#x27;);
+$(&#x27;#row-farm&#x27;).onclick=()=&gt;go(&#x27;s-farm&#x27;);
+$(&#x27;#row-help&#x27;).onclick=()=&gt;go(&#x27;s-help&#x27;);
+$(&#x27;#me-title&#x27;).onclick=()=&gt;{
+  const ok=TITLES.filter(titleUnlocked);
+  const i=ok.findIndex(t=&gt;t[1]===currentTitle());
+  const next=ok[(i+1)%ok.length];
+  save.title=next[1]; persist(); renderMine();
+  toast(ok.length&gt;1?(&#x27;称号已换成「&#x27;+next[1]+&#x27;」&#x27;):&#x27;再解锁一些成就就能换称号&#x27;);
+};
+$(&#x27;#row-cloud&#x27;).onclick=()=&gt;{ persist(); toast(&#x27;进度已保存到本机浏览器&#x27;); };
+$(&#x27;#row-about&#x27;).onclick=()=&gt;toast(&#x27;羊羊羊之草原牧歌 V1.0&#x27;);
+let resetArm=0;
+$(&#x27;#row-reset&#x27;).onclick=()=&gt;{
+  const now=Date.now();
+  if(now-resetArm&lt;3000){
+    localStorage.removeItem(SAVE_KEY);
+    save=load(); applySkin(); renderMine(); updateChips();
+    toast(&#x27;进度已清空，重新开始牧羊生活&#x27;);
+    resetArm=0;
+  }else{
+    resetArm=now;
+    toast(&#x27;再点一次确认清空全部进度&#x27;);
+  }
+};
+
+/* =====================================================================
+   阶段五：新手引导
+   前三关分步教学，每一步只在真正的时机出现，讲完就不再打扰
+   ===================================================================== */
+const GUIDE=[
+  {at:&#x27;start1&#x27;, txt:&#x27;点一下最上面那张牌，它就会飞进下面的卡槽。被别的牌压住的会变灰，点不动。&#x27;},
+  {at:&#x27;pick1&#x27;,  txt:&#x27;看下面这排格子 —— 这就是卡槽，一共 7 格。凑齐 3 张一样的就会自动消掉。&#x27;},
+  {at:&#x27;match1&#x27;, txt:&#x27;漂亮！3 秒内连着消就能攒连击，连击越高金币越多。&#x27;},
+  {at:&#x27;half&#x27;,   txt:&#x27;卡槽快满时会变黄变红。7 格全被占满又消不掉，这一关就输了。&#x27;},
+  {at:&#x27;tools&#x27;,  txt:&#x27;过不去的时候用下面三个道具：洗牌打乱、撤回退一步、移出退回 3 张。&#x27;}
+];
+function guideStep(key){
+  if(save.guide&gt;=GUIDE.length) return;</pre></div><div class="ft">第 47 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>  if(cur!==&#x27;s-game&#x27;) return;              /* 引导只属于牌局这一屏 */
+  if(G.mode!==&#x27;normal&#x27;||G.lv&gt;3) return;
+  const idx=GUIDE.findIndex(g=&gt;g.at===key);
+  if(idx&lt;0||idx!==save.guide) return;
+  const c=$(&#x27;#coach&#x27;);
+  $(&#x27;#coach-txt&#x27;).textContent=GUIDE[idx].txt;
+  relang(c);
+  c.classList.add(&#x27;on&#x27;);
+  const t0=Date.now();
+  $(&#x27;#coach-ok&#x27;).onclick=()=&gt;{
+    c.classList.remove(&#x27;on&#x27;);
+    save.guide=idx+1; persist();
+    G.startAt+=Date.now()-t0;          /* 引导期间不计时 */
+  };
+}
+
+/* =====================================================================
+   阶段五：程序化 BGM
+   没有音频素材，用 WebAudio 现场合成一段五声音阶循环。
+   真要上线还是应该换成正经的音乐资源，这里只是把「有背景音乐」这件事跑通
+   ===================================================================== */
+const BGM={
+  timer:0, step:0,
+  scale:[392.00,440.00,493.88,587.33,659.25,783.99],
+  start(){
+    if(this.timer||!save.bgm) return;
+    const c=ac(); if(!c) return;
+    this.timer=setInterval(()=&gt;this.tick(),480);
+  },
+  stop(){ clearInterval(this.timer); this.timer=0; },
+  tick(){
+    /* 页面不可见时 AudioContext 会挂起，继续建振荡器只会白白堆积 */
+    if(!save.bgm||document.hidden||cur!==&#x27;s-game&#x27;){ this.stop(); return; }
+    const c=ac(); if(!c) return;
+    const s=this.scale;
+    const n=s[(this.step*3+((this.step/4|0)%2?2:0))%s.length];
+    this.note(n/2,.9,.030);
+    if(this.step%2===0) this.note(n,1.1,.016);
+    if(this.step%8===0) this.note(s[0]/4,1.8,.030);
+    this.step++;
+  },
+  note(f,dur,vol){
+    const c=ac(); if(!c) return;
+    const t0=c.currentTime;
+    const o=c.createOscillator(), g=c.createGain(), lp=c.createBiquadFilter();
+    lp.type=&#x27;lowpass&#x27;; lp.frequency.value=1400;
+    o.type=&#x27;sine&#x27;; o.frequency.setValueAtTime(f,t0);
+    g.gain.setValueAtTime(0,t0);
+    g.gain.linearRampToValueAtTime(vol,t0+.08);
+    g.gain.exponentialRampToValueAtTime(.0001,t0+dur);
+    o.connect(lp); lp.connect(g); g.connect(c.destination);
+    o.start(t0); o.stop(t0+dur+.05);
+  }
+};
+
+/* =====================================================================
+   阶段四：养成与收集
+   ---------------------------------------------------------------------
+   红线：所有养成加成必须以「经济向」为主，涉及玩法的效果只放在极少数羊上，
+   并且开满之后要用模拟器重跑定标曲线，各关通过率上浮不得超过 8 个点。</pre></div><div class="ft">第 48 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>   前面花了很大力气把难度做成可控的，不能在这里被养成数值冲掉。
+   ===================================================================== */
+
+/* --- 羊图鉴：24 只，配色复用同一个 SVG，美术成本为零 --- */
+const SHEEP=[
+  {id:&#x27;hat&#x27;,   n:&#x27;草帽羊&#x27;,   r:1, p:{t:&#x27;coin&#x27;,v:3},   c:[&#x27;#2E6B3E&#x27;,&#x27;#FFFFFF&#x27;,&#x27;#FBFDF7&#x27;,&#x27;#F6C445&#x27;
+,&#x27;#D3E8C6&#x27;], s:&#x27;第一只跟着你出门的羊，草帽是它自己叼来的。&#x27;},
+  {id:&#x27;moss&#x27;,  n:&#x27;苔藓羊&#x27;,   r:1, p:{t:&#x27;wool&#x27;,v:3},   c:[&#x27;#3D6B4A&#x27;,&#x27;#EFF6EC&#x27;,&#x27;#F8FCF6&#x27;,&#x27;#A8C98F&#x27;
+,&#x27;#CFE3C6&#x27;], s:&#x27;喜欢在背阴的石头上打盹，毛里总有青苔味。&#x27;},
+  {id:&#x27;cloud&#x27;, n:&#x27;云朵羊&#x27;,   r:1, p:{t:&#x27;coin&#x27;,v:3},   c:[&#x27;#5A7A8C&#x27;,&#x27;#FBFDFF&#x27;,&#x27;#FFFFFF&#x27;,&#x27;#BBD5E4&#x27;
+,&#x27;#D8E7F0&#x27;], s:&#x27;走路很轻，远看像一朵挪动的云。&#x27;},
+  {id:&#x27;wheat&#x27;, n:&#x27;麦穗羊&#x27;,   r:1, p:{t:&#x27;wool&#x27;,v:3},   c:[&#x27;#8A6B2A&#x27;,&#x27;#FFF9E8&#x27;,&#x27;#FFFDF4&#x27;,&#x27;#E8C878&#x27;
+,&#x27;#EDE0BE&#x27;], s:&#x27;秋天最忙，据说能背回半亩地的麦穗。&#x27;},
+  {id:&#x27;mint&#x27;,  n:&#x27;薄荷羊&#x27;,   r:1, p:{t:&#x27;coin&#x27;,v:4},   c:[&#x27;#3E8574&#x27;,&#x27;#F0FBF7&#x27;,&#x27;#F8FEFC&#x27;,&#x27;#9FD9C6&#x27;
+,&#x27;#CEEDE3&#x27;], s:&#x27;路过的地方都会留下一股清凉气。&#x27;},
+  {id:&#x27;clay&#x27;,  n:&#x27;陶土羊&#x27;,   r:1, p:{t:&#x27;wool&#x27;,v:4},   c:[&#x27;#8A5A3E&#x27;,&#x27;#FFF3EA&#x27;,&#x27;#FFFAF5&#x27;,&#x27;#DBA07A&#x27;
+,&#x27;#EBD3C2&#x27;], s:&#x27;在河滩长大，蹄子上永远沾着泥。&#x27;},
+  {id:&#x27;dew&#x27;,   n:&#x27;露珠羊&#x27;,   r:1, p:{t:&#x27;coin&#x27;,v:4},   c:[&#x27;#3C7E93&#x27;,&#x27;#F0FAFD&#x27;,&#x27;#F9FDFF&#x27;,&#x27;#9AD2E4&#x27;
+,&#x27;#CDE9F2&#x27;], s:&#x27;天没亮就出门，只为舔到最新鲜的那滴露水。&#x27;},
+  {id:&#x27;straw&#x27;, n:&#x27;干草羊&#x27;,   r:1, p:{t:&#x27;wool&#x27;,v:4},   c:[&#x27;#9A7B36&#x27;,&#x27;#FFFBEE&#x27;,&#x27;#FFFDF7&#x27;,&#x27;#E0C489&#x27;
+,&#x27;#EEE2C4&#x27;], s:&#x27;冬天的粮仓管理员，睡觉也抱着草垛。&#x27;},
+  {id:&#x27;fern&#x27;,  n:&#x27;蕨叶羊&#x27;,   r:1, p:{t:&#x27;coin&#x27;,v:4},   c:[&#x27;#2F6B4E&#x27;,&#x27;#EEF8F1&#x27;,&#x27;#F7FCF9&#x27;,&#x27;#8CC9A4&#x27;
+,&#x27;#C9E6D5&#x27;], s:&#x27;认得林子里每一株蕨，从不迷路。&#x27;},
+  {id:&#x27;stone&#x27;, n:&#x27;碎石羊&#x27;,   r:1, p:{t:&#x27;wool&#x27;,v:4},   c:[&#x27;#5E6670&#x27;,&#x27;#F5F6F8&#x27;,&#x27;#FBFBFC&#x27;,&#x27;#B6BEC8&#x27;
+,&#x27;#DCE0E6&#x27;], s:&#x27;沉默寡言，撞过的石头比走过的路多。&#x27;},
+  {id:&#x27;peach&#x27;, n:&#x27;蜜桃羊&#x27;,   r:1, p:{t:&#x27;coin&#x27;,v:5},   c:[&#x27;#A85A5A&#x27;,&#x27;#FFF2F2&#x27;,&#x27;#FFF9F9&#x27;,&#x27;#F0A9A9&#x27;
+,&#x27;#F3D6D6&#x27;], s:&#x27;夏天会偷偷去果园，回来时脸是红的。&#x27;},
+  {id:&#x27;lilac&#x27;, n:&#x27;紫丁羊&#x27;,   r:1, p:{t:&#x27;wool&#x27;,v:5},   c:[&#x27;#6E5A96&#x27;,&#x27;#F7F2FD&#x27;,&#x27;#FCFAFF&#x27;,&#x27;#C0A8E0&#x27;
+,&#x27;#DED2F0&#x27;], s:&#x27;黄昏时最好看，毛尖泛着淡淡的紫。&#x27;},
+  {id:&#x27;olive&#x27;, n:&#x27;橄榄羊&#x27;,   r:1, p:{t:&#x27;coin&#x27;,v:5},   c:[&#x27;#6B7B36&#x27;,&#x27;#F7FAEC&#x27;,&#x27;#FCFDF6&#x27;,&#x27;#BCCB84&#x27;
+,&#x27;#DDE6C2&#x27;], s:&#x27;不挑食，据说吃过牧场里所有能吃的东西。&#x27;},
+  {id:&#x27;coral&#x27;, n:&#x27;珊瑚羊&#x27;,   r:1, p:{t:&#x27;wool&#x27;,v:5},   c:[&#x27;#B06248&#x27;,&#x27;#FFF4F0&#x27;,&#x27;#FFFAF8&#x27;,&#x27;#F0AE94&#x27;
+,&#x27;#F5D9CE&#x27;], s:&#x27;从很远的海边走来，还记得潮水的声音。&#x27;},
+
+  {id:&#x27;scarf&#x27;, n:&#x27;围巾羊&#x27;,   r:2, p:{t:&#x27;combo&#x27;,v:600},  c:[&#x27;#2F6C8F&#x27;,&#x27;#F4FAFE&#x27;,&#x27;#FBFDFF&#x27;,&#x27;#EE9A8
+7&#x27;,&#x27;#CDE4F2&#x27;], s:&#x27;围巾是牧羊人织的，它一年四季都不肯摘。&#x27;},
+  {id:&#x27;snow&#x27;,  n:&#x27;初雪羊&#x27;,   r:2, p:{t:&#x27;combo&#x27;,v:600},  c:[&#x27;#5C7A96&#x27;,&#x27;#FFFFFF&#x27;,&#x27;#FBFDFF&#x27;,&#x27;#B9D4E
+8&#x27;,&#x27;#DCEAF4&#x27;], s:&#x27;落雪那天出生，从此不怕冷。&#x27;},
+  {id:&#x27;amber&#x27;, n:&#x27;琥珀羊&#x27;,   r:2, p:{t:&#x27;coin&#x27;,v:7},     c:[&#x27;#9A6516&#x27;,&#x27;#FFF6E4&#x27;,&#x27;#FFFCF2&#x27;,&#x27;#E8B34
+C&#x27;,&#x27;#F0DDB0&#x27;], s:&#x27;毛色像凝固的阳光，靠近会觉得暖。&#x27;},
+  {id:&#x27;ivy&#x27;,   n:&#x27;常春羊&#x27;,   r:2, p:{t:&#x27;wool&#x27;,v:7},     c:[&#x27;#2C6A3C&#x27;,&#x27;#EDF7EE&#x27;,&#x27;#F7FCF8&#x27;,&#x27;#82C08
+E&#x27;,&#x27;#C4E2CA&#x27;], s:&#x27;爬过最高的墙，也蹭掉过最多的毛。&#x27;},
+  {id:&#x27;thaw&#x27;,  n:&#x27;暖阳羊&#x27;,   r:2, p:{t:&#x27;thaw&#x27;,v:2},     c:[&#x27;#B07A1E&#x27;,&#x27;#FFF8E6&#x27;,&#x27;#FFFDF4&#x27;,&#x27;#F2C55
+C&#x27;,&#x27;#F2E3B8&#x27;], s:&#x27;走到哪儿，哪儿的冰就化了。&#x27;},
+  {id:&#x27;peek&#x27;,  n:&#x27;千里羊&#x27;,   r:2, p:{t:&#x27;peek&#x27;,v:2},     c:[&#x27;#456B9A&#x27;,&#x27;#F2F7FE&#x27;,&#x27;#FAFCFF&#x27;,&#x27;#A8C3E
+8&#x27;,&#x27;#D3E1F5&#x27;], s:&#x27;站在坡顶能看清三里外的草，眼神好得离谱。&#x27;},
+  {id:&#x27;lucky&#x27;, n:&#x27;四叶羊&#x27;,   r:2, p:{t:&#x27;drop&#x27;,v:30},    c:[&#x27;#3A8A50&#x27;,&#x27;#EFFAF1&#x27;,&#x27;#F8FDF9&#x27;,&#x27;#8FD3A
+2&#x27;,&#x27;#C8EAD2&#x27;], s:&#x27;总能踩到四叶草，连它自己都觉得奇怪。&#x27;},
+
+  {id:&#x27;star&#x27;,  n:&#x27;星月羊&#x27;,   r:3, p:{t:&#x27;luck&#x27;,v:1},     c:[&#x27;#4B3A78&#x27;,&#x27;#F5F1FD&#x27;,&#x27;#FCFAFF&#x27;,&#x27;#C9A6F
+0&#x27;,&#x27;#DED4F2&#x27;], s:&#x27;夜里会抬头很久，像在等谁。&#x27;},
+  {id:&#x27;aurora&#x27;,n:&#x27;极光羊&#x27;,   r:3, p:{t:&#x27;coin&#x27;,v:10},    c:[&#x27;#2F7A86&#x27;,&#x27;#EEFBFB&#x27;,&#x27;#F8FEFE&#x27;,&#x27;#7ED8D
+8&#x27;,&#x27;#C2ECEC&#x27;], s:&#x27;极夜里见过天上的光，回来后毛就变了颜色。&#x27;},
+  {id:&#x27;golden&#x27;,n:&#x27;鎏金羊&#x27;,   r:3, p:{t:&#x27;wool&#x27;,v:10},    c:[&#x27;#8A6A12&#x27;,&#x27;#FFFAE6&#x27;,&#x27;#FFFDF3&#x27;,&#x27;#F2CE5
+5&#x27;,&#x27;#F0E2B4&#x27;], s:&#x27;传说中被阳光亲吻过的羊，很少有人真的见过。&#x27;}
+];
+const SHEEP_BY={}; SHEEP.forEach(s=&gt;SHEEP_BY[s.id]=s);
+const RARITY=[&#x27;&#x27;,&#x27;普通&#x27;,&#x27;稀有&#x27;,&#x27;传说&#x27;];
+const PASSIVE_TXT={
+  coin:v=&gt;&#x27;金币产出 +&#x27;+v+&#x27;%&#x27;,</pre></div><div class="ft">第 49 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>  wool:v=&gt;&#x27;羊毛产出 +&#x27;+v+&#x27;%&#x27;,
+  combo:v=&gt;&#x27;连击窗口 +&#x27;+(v/1000).toFixed(1)+&#x27; 秒&#x27;,
+  thaw:v=&gt;&#x27;开局自动解冻 &#x27;+v+&#x27; 张冰冻牌&#x27;,
+  peek:v=&gt;&#x27;开局自动翻开 &#x27;+v+&#x27; 张谜之牌&#x27;,
+  drop:v=&gt;&#x27;图鉴掉落率 +&#x27;+v+&#x27;%&#x27;,
+  luck:v=&gt;&#x27;通关必定掉落一只羊&#x27;
+};
+/* 羊等级：重复掉落攒碎片，3 / 8 片升一级，效果 ×1.5 / ×2 */
+const SHARD_NEED=[0,3,8];
+const SHARD_MAX=8;      /* 超过这个数的碎片对本羊已无用，可以拿去兑换缺的羊 */
+const PITY_N=12;        /* 连续 12 次掉落都是重复，下一次必给新羊 */
+const EXCHANGE={1:6, 2:12, 3:25};   /* 兑换一只未收集的羊要多少富余碎片 */
+function surplusShards(){
+  return Object.keys(save.dex||{}).reduce((a,id)=&gt;a+Math.max(0,((save.dex[id]||{}).s||0)-SHARD_M
+AX),0);
+}
+function dexFull(){ return Object.keys(save.dex||{}).length&gt;=SHEEP.length; }
+/* 兑换：只花「已经没用的」碎片，从富余最多的羊身上先扣，
+   所以不会把还在升级路上的羊拆掉 */
+function exchangeSheep(r){
+  const fresh=SHEEP.filter(s=&gt;s.r===r&amp;&amp;!(save.dex||{})[s.id]);
+  if(!fresh.length){ toast(&#x27;这个稀有度已经集齐了&#x27;); SFX.deny(); return; }
+  const cost=EXCHANGE[r], have=surplusShards();
+  if(have&lt;cost){ toast(&#x27;富余碎片不够，还差 &#x27;+(cost-have)+&#x27; 片&#x27;); SFX.deny(); return; }
+  let need=cost;
+  Object.keys(save.dex).sort((a,b)=&gt;(save.dex[b].s||0)-(save.dex[a].s||0)).forEach(id=&gt;{
+    if(need&lt;=0) return;
+    const take=Math.min(Math.max(0,(save.dex[id].s||0)-SHARD_MAX),need);
+    save.dex[id].s-=take; need-=take;
+  });
+  const pick=fresh[Math.floor(Math.random()*fresh.length)];
+  save.dex[pick.id]={s:0}; save.pity=0;
+  persist(); checkAch(); renderDex(); SFX.coin();
+  toast(&#x27;碎片换来了 &#x27;+pick.n+&#x27;：&#x27;+pick.s);
+}
+function sheepLv(id){
+  const sh=(save.dex||{})[id]; if(!sh) return 0;
+  return sh.s&gt;=SHARD_NEED[2]?3 : sh.s&gt;=SHARD_NEED[1]?2 : 1;
+}
+function sheepMul(id){ return [0,1,1.5,2][sheepLv(id)]||0; }
+function activeSheep(){ return (save.dex&amp;&amp;save.dex[save.skin])?SHEEP_BY[save.skin]:null; }
+function passive(type){
+  const s=activeSheep();
+  if(!s||s.p.t!==type) return 0;
+  return s.p.v*sheepMul(s.id);
+}
+
+/* --- 牧场：4 项建设，纯经济加成，完全不碰难度 --- */
+const FARM=[
+  {id:&#x27;grass&#x27;, n:&#x27;青草地&#x27;, ico:&#x27;fa-seedling&#x27;, max:5, cost:l=&gt;60+l*40,  desc:l=&gt;&#x27;金币产出 +&#x27;+(l*2
+)+&#x27;%&#x27;},
+  {id:&#x27;mill&#x27;,  n:&#x27;风车&#x27;,   ico:&#x27;fa-fan&#x27;,       max:5, cost:l=&gt;80+l*50,  desc:l=&gt;&#x27;羊毛产出 +&#x27;+(l*
+2)+&#x27;%&#x27;},
+  {id:&#x27;fence&#x27;, n:&#x27;围栏&#x27;,   ico:&#x27;fa-border-all&#x27;,max:5, cost:l=&gt;70+l*45,  desc:l=&gt;&#x27;商店道具便宜 &#x27;+
+(l*3)+&#x27;%&#x27;},
+  {id:&#x27;pen&#x27;,   n:&#x27;羊圈&#x27;,   ico:&#x27;fa-house-chimney&#x27;, max:5, cost:l=&gt;90+l*60, desc:l=&gt;&#x27;图鉴掉落率 +
+&#x27;+(l*4)+&#x27;%&#x27;}
+];
+function farmLv(id){ return (save.farm||{})[id]||0; }
+/* 图鉴全满：+5% 金币与羊毛。只碰经济不碰难度，</pre></div><div class="ft">第 50 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>   养成加成不得让通过率上浮超过 8 个点这条红线仍然成立 */
+function dexFullBonus(){ return dexFull()?0.05:0; }
+function coinMul(){ return 1 + farmLv(&#x27;grass&#x27;)*0.02 + passive(&#x27;coin&#x27;)/100 + dexFullBonus(); }
+function woolMul(){ return 1 + farmLv(&#x27;mill&#x27;)*0.02 + passive(&#x27;wool&#x27;)/100 + dexFullBonus(); }
+function priceMul(){ return 1 - farmLv(&#x27;fence&#x27;)*0.03; }
+function dropRate(){ return 0.34 + farmLv(&#x27;pen&#x27;)*0.04 + passive(&#x27;drop&#x27;)/100; }
+
+/* --- 道具等级：用难度旋钮做洗牌升级，洗出来的局面必胜路线更宽 --- */
+const TOOL_UP={
+  shuffle:{n:&#x27;洗牌&#x27;,ico:&#x27;fa-shuffle&#x27;,   cost:[0,120,260], desc:[&#x27;有解洗牌&#x27;,&#x27;有解洗牌 · 局面更宽
+松&#x27;,&#x27;有解洗牌 · 洗成最宽松局面&#x27;]},
+  undo:   {n:&#x27;撤回&#x27;,ico:&#x27;fa-rotate-left&#x27;,cost:[0,100,220], desc:[&#x27;撤回 1 步&#x27;,&#x27;连续撤回 2 步&#x27;,&#x27;连
+续撤回 3 步&#x27;]},
+  out:    {n:&#x27;移出&#x27;,ico:&#x27;fa-arrow-right-from-bracket&#x27;,cost:[0,140,300], desc:[&#x27;移出 3 张&#x27;,&#x27;移出 
+4 张&#x27;,&#x27;移出 5 张&#x27;]}
+};
+function toolLv(k){ return (save.toolLv||{})[k]||1; }
+
+/* --- 成就：36 条，全部由真实统计推出 --- */
+const ACH=[
+  [&#x27;first&#x27;,&#x27;初次放羊&#x27;,&#x27;通关第 1 关&#x27;,s=&gt;s.cleared&gt;=1,20],
+  [&#x27;c5&#x27;,&#x27;小有所成&#x27;,&#x27;累计通关 5 关&#x27;,s=&gt;s.cleared&gt;=5,20],
+  [&#x27;c15&#x27;,&#x27;熟能生巧&#x27;,&#x27;累计通关 15 关&#x27;,s=&gt;s.cleared&gt;=15,30],
+  [&#x27;c40&#x27;,&#x27;牧场老手&#x27;,&#x27;累计通关 40 关&#x27;,s=&gt;s.cleared&gt;=40,50],
+  [&#x27;c80&#x27;,&#x27;草原传说&#x27;,&#x27;累计通关 80 关&#x27;,s=&gt;s.cleared&gt;=80,80],
+  [&#x27;lv5&#x27;,&#x27;越走越远&#x27;,&#x27;解锁到第 5 关&#x27;,s=&gt;s.level&gt;=5,20],
+  [&#x27;lv12&#x27;,&#x27;出了新手村&#x27;,&#x27;解锁到第 12 关&#x27;,s=&gt;s.level&gt;=12,30],
+  [&#x27;lv21&#x27;,&#x27;翻过雪线&#x27;,&#x27;解锁到第 21 关&#x27;,s=&gt;s.level&gt;=21,50],
+  [&#x27;lv31&#x27;,&#x27;走到星夜&#x27;,&#x27;解锁到第 31 关&#x27;,s=&gt;s.level&gt;=31,80],
+  [&#x27;st10&#x27;,&#x27;攒星星&#x27;,&#x27;累计 10 颗星&#x27;,s=&gt;starTotal()&gt;=10,20],
+  [&#x27;st30&#x27;,&#x27;三十而立&#x27;,&#x27;累计 30 颗星&#x27;,s=&gt;starTotal()&gt;=30,40],
+  [&#x27;st60&#x27;,&#x27;星光满地&#x27;,&#x27;累计 60 颗星&#x27;,s=&gt;starTotal()&gt;=60,70],
+  [&#x27;st99&#x27;,&#x27;星河灿烂&#x27;,&#x27;累计 99 颗星&#x27;,s=&gt;starTotal()&gt;=99,120],
+  [&#x27;perfect&#x27;,&#x27;一尘不染&#x27;,&#x27;有 1 关拿到三星&#x27;,s=&gt;Object.values(s.stars||{}).some(v=&gt;v&gt;=3),25],
+  [&#x27;perfect5&#x27;,&#x27;五星连珠&#x27;,&#x27;有 5 关拿到三星&#x27;,s=&gt;Object.values(s.stars||{}).filter(v=&gt;v&gt;=3).length&gt;
+=5,45],
+  [&#x27;perfect15&#x27;,&#x27;完美主义&#x27;,&#x27;有 15 关拿到三星&#x27;,s=&gt;Object.values(s.stars||{}).filter(v=&gt;v&gt;=3).lengt
+h&gt;=15,90],
+  [&#x27;combo5&#x27;,&#x27;小连击&#x27;,&#x27;单局连击达到 5&#x27;,s=&gt;(s.st.bestCombo||0)&gt;=5,20],
+  [&#x27;combo10&#x27;,&#x27;连击好手&#x27;,&#x27;单局连击达到 10&#x27;,s=&gt;(s.st.bestCombo||0)&gt;=10,35],
+  [&#x27;combo20&#x27;,&#x27;连击大师&#x27;,&#x27;单局连击达到 20&#x27;,s=&gt;(s.st.bestCombo||0)&gt;=20,70],
+  [&#x27;m100&#x27;,&#x27;消了一百组&#x27;,&#x27;累计消除 100 组&#x27;,s=&gt;(s.st.matches||0)&gt;=100,20],
+  [&#x27;m500&#x27;,&#x27;消了五百组&#x27;,&#x27;累计消除 500 组&#x27;,s=&gt;(s.st.matches||0)&gt;=500,40],
+  [&#x27;m2000&#x27;,&#x27;消除机器&#x27;,&#x27;累计消除 2000 组&#x27;,s=&gt;(s.st.matches||0)&gt;=2000,90],
+  [&#x27;boss1&#x27;,&#x27;初见 Boss&#x27;,&#x27;通关 1 个 Boss 关&#x27;,s=&gt;(s.st.boss||0)&gt;=1,40],
+  [&#x27;boss3&#x27;,&#x27;Boss 克星&#x27;,&#x27;通关 3 个 Boss 关&#x27;,s=&gt;(s.st.boss||0)&gt;=3,80],
+  [&#x27;notool&#x27;,&#x27;徒手过关&#x27;,&#x27;不用任何道具通关 1 次&#x27;,s=&gt;(s.st.noTool||0)&gt;=1,25],
+  [&#x27;notool10&#x27;,&#x27;老手风范&#x27;,&#x27;不用道具通关 10 次&#x27;,s=&gt;(s.st.noTool||0)&gt;=10,60],
+  [&#x27;daily1&#x27;,&#x27;今日打卡&#x27;,&#x27;完成 1 次每日挑战&#x27;,s=&gt;(s.st.daily||0)&gt;=1,25],
+  [&#x27;daily7&#x27;,&#x27;坚持一周&#x27;,&#x27;完成 7 次每日挑战&#x27;,s=&gt;(s.st.daily||0)&gt;=7,70],
+  [&#x27;endless20&#x27;,&#x27;无尽入门&#x27;,&#x27;无尽模式消 20 组&#x27;,s=&gt;(s.endless||0)&gt;=20,25],
+  [&#x27;endless60&#x27;,&#x27;无尽好手&#x27;,&#x27;无尽模式消 60 组&#x27;,s=&gt;(s.endless||0)&gt;=60,60],
+  [&#x27;dex5&#x27;,&#x27;小小收藏家&#x27;,&#x27;收集 5 只羊&#x27;,s=&gt;Object.keys(s.dex||{}).length&gt;=5,30],
+  [&#x27;dex12&#x27;,&#x27;半个图鉴&#x27;,&#x27;收集 12 只羊&#x27;,s=&gt;Object.keys(s.dex||{}).length&gt;=12,60],
+  [&#x27;dex24&#x27;,&#x27;图鉴全满&#x27;,&#x27;收集全部 24 只羊&#x27;,s=&gt;Object.keys(s.dex||{}).length&gt;=24,150],
+  [&#x27;sr&#x27;,&#x27;传说降临&#x27;,&#x27;收集到 1 只传说羊&#x27;,s=&gt;Object.keys(s.dex||{}).some(id=&gt;SHEEP_BY[id]&amp;&amp;SHEEP_BY
+[id].r===3),80],
+  [&#x27;farm5&#x27;,&#x27;初具规模&#x27;,&#x27;牧场建设累计 5 级&#x27;,s=&gt;Object.values(s.farm||{}).reduce((a,b)=&gt;a+b,0)&gt;=5,4
+0],
+  [&#x27;farm20&#x27;,&#x27;牧场主&#x27;,&#x27;牧场全部建满&#x27;,s=&gt;Object.values(s.farm||{}).reduce((a,b)=&gt;a+b,0)&gt;=20,120]</pre></div><div class="ft">第 51 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>];
+/* 称号：由成就解锁，可在「我的」页切换 */
+const TITLES=[
+  [&#x27;&#x27;,        &#x27;牧羊新手&#x27;,   ()=&gt;true],
+  [&#x27;c15&#x27;,     &#x27;熟练牧人&#x27;,   null],
+  [&#x27;c40&#x27;,     &#x27;牧场老手&#x27;,   null],
+  [&#x27;c80&#x27;,     &#x27;草原传说&#x27;,   null],
+  [&#x27;perfect15&#x27;,&#x27;完美主义者&#x27;, null],
+  [&#x27;combo20&#x27;, &#x27;连击大师&#x27;,   null],
+  [&#x27;boss3&#x27;,   &#x27;Boss 克星&#x27;,  null],
+  [&#x27;daily7&#x27;,  &#x27;风雨无阻&#x27;,   null],
+  [&#x27;dex24&#x27;,   &#x27;图鉴收藏家&#x27;, null],
+  [&#x27;sr&#x27;,      &#x27;传说饲主&#x27;,   null],
+  [&#x27;farm20&#x27;,  &#x27;牧场主&#x27;,     null],
+  [&#x27;st99&#x27;,    &#x27;星河灿烂&#x27;,   null]
+];
+function titleUnlocked(t){ return !t[0] || (save.ach||[]).includes(t[0]); }
+function currentTitle(){
+  const t=TITLES.find(x=&gt;x[1]===save.title &amp;&amp; titleUnlocked(x));
+  return t?t[1]:&#x27;牧羊新手&#x27;;
+}
+function starTotal(){ return Object.values(save.stars||{}).reduce((a,b)=&gt;a+b,0); }
+function achDone(a){ try{ return !!a[3](save); }catch(e){ return false; } }
+function checkAch(){
+  save.ach=save.ach||[];
+  let got=[];
+  ACH.forEach(a=&gt;{
+    if(save.ach.includes(a[0])) return;
+    if(achDone(a)){ save.ach.push(a[0]); save.wool+=a[4]; got.push(a); }
+  });
+  if(got.length){
+    persist();
+    setTimeout(()=&gt;toast(&#x27;成就达成：&#x27;+got[0][1]+(got.length&gt;1?&#x27; 等 &#x27;+got.length+&#x27; 项&#x27;:&#x27;&#x27;)+&#x27; · 羊
+毛 +&#x27;+got.reduce((s,a)=&gt;s+a[4],0)),500);
+  }
+  return got;
+}
+
+function comboWindow(){ return COMBO_WINDOW+passive(&#x27;combo&#x27;)+((G.buffs&amp;&amp;G.buffs.combo)||0); }
+/* 开局生效的被动：解冻 / 翻牌。都只作用于特殊牌，幅度很小 */
+function applyStartPassives(){
+  G.aidUsed=false;
+  /* 续局时不能再执行一遍，否则反复退出重进能把整盘冰冻牌全化开 */
+  if(G.passivesDone) return;
+  G.passivesDone=true;
+  const th=passive(&#x27;thaw&#x27;);
+  if(th){
+    G.tiles.filter(t=&gt;t.sp===&#x27;freeze&#x27;&amp;&amp;t.frozen).slice(0,Math.round(th)).forEach(t=&gt;{
+      t.frozen=false; drawTile(t);
+    });
+  }
+  const pk=passive(&#x27;peek&#x27;);
+  if(pk){
+    G.tiles.filter(t=&gt;t.sp===&#x27;mystery&#x27;&amp;&amp;!t.shown).slice(0,Math.round(pk)).forEach(t=&gt;{
+      t.shown=true; drawTile(t);
+    });
+  }
+}
+/* 结算页展示掉落的羊 */
+function showDrop(d){</pre></div><div class="ft">第 52 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>  const box=$(&#x27;#win-drop&#x27;);
+  if(!d){ box.classList.remove(&#x27;on&#x27;); box.innerHTML=&#x27;&#x27;; return; }
+  const s=d.sheep;
+  box.classList.add(&#x27;on&#x27;);
+  box.innerHTML=&#x27;&lt;div class=&quot;dp-sheep&quot; style=&quot;&#x27;+sheepStyle(s)+&#x27;&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#sheep&quot;/&gt;&lt;/svg&gt;
+&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;dp-info&quot;&gt;&lt;b&gt;&#x27;+s.n+&#x27;&lt;span class=&quot;dp-r r&#x27;+s.r+&#x27;&quot;&gt;&#x27;+RARITY[s.r]+&#x27;&lt;/span&gt;&lt;/b&gt;&#x27;+
+    &#x27;&lt;span&gt;&#x27;+(d.dup?&#x27;已有，转为碎片 ×1（当前 &#x27;+save.dex[s.id].s+&#x27;）&#x27;:&#x27;新羊入队！&#x27;+PASSIVE_TXT[s.
+p.t](s.p.v))+&#x27;&lt;/span&gt;&lt;/div&gt;&#x27;;
+}
+function sheepStyle(s){
+  return &#x27;--sheep-ink:&#x27;+s.c[0]+&#x27;;--sheep-wool:&#x27;+s.c[1]+&#x27;;--sheep-face:&#x27;+s.c[2]+
+         &#x27;;--sheep-blush:&#x27;+s.c[3]+&#x27;;--sheep-ring:&#x27;+s.c[4];
+}
+
+/* =====================================================================
+   每日任务
+   ---------------------------------------------------------------------
+   纯留存钩子：只发资源，不给任何玩法加成，所以完全不碰难度红线。
+   每天用日期播种抽三条，进度按自然日重置。
+   ===================================================================== */
+const TASKS=[
+  {id:&#x27;match&#x27;, stat:&#x27;matches&#x27;, goals:[20,30,45], txt:g=&gt;&#x27;累计消除 &#x27;+g+&#x27; 组&#x27;,      coin:70,  wool
+:14},
+  {id:&#x27;clear&#x27;, stat:&#x27;clears&#x27;,  goals:[1,2,3],    txt:g=&gt;&#x27;通关 &#x27;+g+&#x27; 关&#x27;,           coin:90,  woo
+l:18},
+  {id:&#x27;combo&#x27;, stat:&#x27;combo&#x27;,   goals:[4,5,6],    txt:g=&gt;&#x27;单局达成 &#x27;+g+&#x27; 连击&#x27;,     coin:80,  woo
+l:16, max:true},
+  {id:&#x27;play&#x27;,  stat:&#x27;plays&#x27;,   goals:[3,5,7],    txt:g=&gt;&#x27;开局 &#x27;+g+&#x27; 次&#x27;,           coin:55,  woo
+l:11},
+  {id:&#x27;spec&#x27;,  stat:&#x27;spec&#x27;,    goals:[6,10,15],  txt:g=&gt;&#x27;消掉 &#x27;+g+&#x27; 张特殊牌&#x27;,     coin:85,  woo
+l:17},
+  {id:&#x27;daily&#x27;, stat:&#x27;dailyRun&#x27;,goals:[1],        txt:()=&gt;&#x27;完成一次每日挑战&#x27;,        coin:110, wo
+ol:22}
+];
+const TASK_BY={}; TASKS.forEach(t=&gt;TASK_BY[t.id]=t);
+function ensureTasks(){
+  const key=dateKey();
+  if(!save.tasks||save.tasks.date!==key){
+    /* 用日期播种抽三条，同一天进游戏拿到的任务是固定的 */
+    const r=mulberry32(dailySeed());
+    const pool=TASKS.slice();
+    for(let i=pool.length-1;i&gt;0;i--){ const j=Math.floor(r()*(i+1)); [pool[i],pool[j]]=[pool[j],
+pool[i]]; }
+    save.tasks={ date:key, prog:{}, list:pool.slice(0,3).map(t=&gt;({
+      id:t.id, goal:t.goals[Math.floor(r()*t.goals.length)], claimed:false
+    })) };
+    persist();
+  }
+  return save.tasks;
+}
+function bumpTask(stat,val){
+  const T=ensureTasks();
+  const def=TASKS.find(t=&gt;t.stat===stat);
+  T.prog[stat] = def&amp;&amp;def.max ? Math.max(T.prog[stat]||0,val) : (T.prog[stat]||0)+val;
+  persist();
+}
+function taskGot(it){ return (ensureTasks().prog[TASK_BY[it.id].stat])||0; }
+function taskDone(it){ return taskGot(it)&gt;=it.goal; }
+function claimTask(it){</pre></div><div class="ft">第 53 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>  if(it.claimed||!taskDone(it)) return false;
+  const d=TASK_BY[it.id];
+  it.claimed=true;
+  save.coins+=Math.round(d.coin*coinMul());
+  save.wool+=Math.round(d.wool*woolMul());
+  persist(); SFX.coin(); updateChips();
+  toast(&#x27;任务完成！金币 +&#x27;+Math.round(d.coin*coinMul())+&#x27; · 羊毛 +&#x27;+Math.round(d.wool*woolMul())
+);
+  return true;
+}
+function renderTasks(){
+  const T=ensureTasks();
+  const box=$(&#x27;#task-list&#x27;); if(!box) return;
+  const left=T.list.filter(it=&gt;!it.claimed).length;
+  $(&#x27;#task-sub&#x27;).textContent = left?(&#x27;还有 &#x27;+left+&#x27; 项没领&#x27;):&#x27;今日已全部完成&#x27;;
+  box.innerHTML=&#x27;&#x27;;
+  T.list.forEach(it=&gt;{
+    const d=TASK_BY[it.id], got=Math.min(taskGot(it),it.goal), done=taskDone(it);
+    const el=document.createElement(&#x27;div&#x27;);
+    el.className=&#x27;task-row&#x27;+(it.claimed?&#x27; claimed&#x27;:(done?&#x27; ready&#x27;:&#x27;&#x27;));
+    el.innerHTML=&#x27;&lt;div class=&quot;tk-t&quot;&gt;&lt;b&gt;&#x27;+d.txt(it.goal)+&#x27;&lt;/b&gt;&#x27;+
+      &#x27;&lt;div class=&quot;tk-bar&quot;&gt;&lt;i style=&quot;width:&#x27;+(got/it.goal*100)+&#x27;%&quot;&gt;&lt;/i&gt;&lt;/div&gt;&lt;/div&gt;&#x27;+
+      &#x27;&lt;div class=&quot;tk-r&quot;&gt;&lt;span&gt;&#x27;+got+&#x27;/&#x27;+it.goal+&#x27;&lt;/span&gt;&#x27;+
+      &#x27;&lt;button class=&quot;tk-btn&quot;&gt;&#x27;+(it.claimed?&#x27;已领&#x27;:(done?&#x27;领取&#x27;:&#x27;金币 &#x27;+d.coin))+&#x27;&lt;/button&gt;&lt;/div
+&gt;&#x27;;
+    el.querySelector(&#x27;.tk-btn&#x27;).onclick=()=&gt;{
+      if(it.claimed){ toast(&#x27;这项已经领过了&#x27;); return; }
+      if(!done){ toast(&#x27;还差 &#x27;+(it.goal-got)+&#x27; 就能领了&#x27;); SFX.deny(); return; }
+      claimTask(it); renderTasks();
+    };
+    box.appendChild(el);
+  });
+}
+
+/* =====================================================================
+   无尽模式：波间三选一增益
+   全部是「放宽约束」类型（多格子 / 少花色 / 少块数 / 送道具），
+   所以下一波的构造依然成立，有解性不受影响
+   ===================================================================== */
+const BUFFS=[
+  {id:&#x27;slot&#x27;,  ico:&#x27;fa-table-columns&#x27;, n:&#x27;多一格卡槽&#x27;, d:&#x27;接下来每一波都多一个格子，效果会叠加&#x27;}
+,
+  {id:&#x27;color&#x27;, ico:&#x27;fa-palette&#x27;,       n:&#x27;少一种花色&#x27;, d:&#x27;下一波开始花色少一种，配对更容易&#x27;},
+  {id:&#x27;small&#x27;, ico:&#x27;fa-compress&#x27;,      n:&#x27;盘面缩小&#x27;,   d:&#x27;下一波少 12 张牌，跑得更快&#x27;},
+  {id:&#x27;tool&#x27;,  ico:&#x27;fa-toolbox&#x27;,       n:&#x27;补给两件&#x27;,   d:&#x27;立刻获得 2 个随机道具&#x27;},
+  {id:&#x27;combo&#x27;, ico:&#x27;fa-fire&#x27;,          n:&#x27;连击更宽松&#x27;, d:&#x27;连击窗口延长 1.5 秒，更容易连起来&#x27;}
+];
+function offerBuff(){
+  const r=shuffle(BUFFS.slice()).slice(0,3);
+  $(&#x27;#buff-title&#x27;).textContent=&#x27;第 &#x27;+G.wave+&#x27; 波来了&#x27;;
+  const g=$(&#x27;#buff-grid&#x27;); g.innerHTML=&#x27;&#x27;;
+  r.forEach(b=&gt;{
+    const el=document.createElement(&#x27;button&#x27;);
+    el.className=&#x27;buff-opt&#x27;;
+    el.innerHTML=&#x27;&lt;div class=&quot;bf-ico&quot;&gt;&lt;i class=&quot;fa-solid &#x27;+b.ico+&#x27;&quot;&gt;&lt;/i&gt;&lt;/div&gt;&#x27;+
+      &#x27;&lt;div class=&quot;bf-t&quot;&gt;&lt;b&gt;&#x27;+b.n+&#x27;&lt;/b&gt;&lt;span&gt;&#x27;+b.d+&#x27;&lt;/span&gt;&lt;/div&gt;&#x27;;
+    el.onclick=()=&gt;{ applyBuff(b.id); $(&#x27;#buffMask&#x27;).classList.remove(&#x27;on&#x27;);
+      startLevel(1); requestAnimationFrame(layout); };
+    g.appendChild(el);
+  });</pre></div><div class="ft">第 54 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>  relang(&#x27;#buffMask&#x27;);
+  $(&#x27;#buffMask&#x27;).classList.add(&#x27;on&#x27;);
+}
+function applyBuff(id){
+  G.buffs=G.buffs||{slots:0,types:0,tiles:0,combo:0};
+  if(id===&#x27;slot&#x27;)  G.buffs.slots++;
+  if(id===&#x27;color&#x27;) G.buffs.types++;
+  if(id===&#x27;small&#x27;) G.buffs.tiles+=12;
+  if(id===&#x27;combo&#x27;) G.buffs.combo+=1500;
+  if(id===&#x27;tool&#x27;){ for(let i=0;i&lt;2;i++) save.tools[TOOL_KEYS[rnd(3)]]++; persist(); renderTools(
+); }
+  SFX.coin();
+}
+
+/* --- 掉落 --- */
+function rollDrop(lv){
+  if(!passive(&#x27;luck&#x27;) &amp;&amp; Math.random()&gt;dropRate()) return null;
+  save.dex=save.dex||{};
+  const rnd=a=&gt;a[Math.floor(Math.random()*a.length)];
+  const roll=Math.random();
+  const want = roll&lt;0.06?3 : roll&lt;0.28?2 : 1;
+  const fresh=SHEEP.filter(s=&gt;!save.dex[s.id]);
+  let pick;
+  if(fresh.length&amp;&amp;(save.pity||0)&gt;=PITY_N){
+    /* 保底：优先补抽中档位里缺的，那一档满了就补最低稀有度里缺的 ——
+       保底不该成为白嫖传说的通道 */
+    const inTier=fresh.filter(s=&gt;s.r===want);
+    const lowest=Math.min.apply(null,fresh.map(s=&gt;s.r));
+    pick=rnd(inTier.length?inTier:fresh.filter(s=&gt;s.r===lowest));
+  }else{
+    /* 平时也向「缺的」倾斜：稀有度先掷，档内七成概率优先给没有的那只。
+       否则后期几乎全是重复，最后一只纯靠运气 */
+    const pool=SHEEP.filter(s=&gt;s.r===want), fp=pool.filter(s=&gt;!save.dex[s.id]);
+    pick=(fp.length&amp;&amp;Math.random()&lt;0.7)?rnd(fp):rnd(pool);
+  }
+  if(!pick) return null;
+  if(save.dex[pick.id]){ save.dex[pick.id].s++; save.pity=(save.pity||0)+1; return {sheep:pick,d
+up:true}; }
+  save.dex[pick.id]={s:0}; save.pity=0;
+  return {sheep:pick,dup:false};
+}
+
+/* =====================================================================
+   公共 UI
+   ===================================================================== */
+function updateChips(){
+  $$(&#x27;.coin-v&#x27;).forEach(el=&gt;el.textContent=fmt(save.coins));
+  /* 这个函数在 applyLang 之后还会改写文本，不补一次翻译就会漏 */
+  if(typeof applyLang===&#x27;function&#x27; &amp;&amp; (save.lang||&#x27;zh&#x27;)!==&#x27;zh&#x27;) applyLang(document.querySelector
+(&#x27;section.on&#x27;));
+}
+
+/* 首页开始按钮：有未打完的一局就直接续上 */
+$(&#x27;#btn-start&#x27;).onclick=()=&gt;{
+  /* 按钮上写着「第 N 关」，点下去就该直接进第 N 关。
+     原来没有存档时会跳到关卡地图，和按钮上的承诺对不上；
+     想挑关卡的话，底部导航栏第二个就是地图 */
+  const p=resumable();
+  enterLevel(p ? p.lv : Math.max(1,save.level||1));
+};</pre></div><div class="ft">第 55 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>/* 切后台 / 关页面前保住当前进度 */
+document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{
+  if(document.hidden){
+    FX.clear(); BGM.stop();
+    G.hiddenAt=Date.now();                 /* 切后台不该继续烧限时关的时间 */
+    if(cur===&#x27;s-game&#x27;) saveProgress();
+  }else{
+    if(G.hiddenAt&amp;&amp;cur===&#x27;s-game&#x27;&amp;&amp;!G.over){ G.startAt+=Date.now()-G.hiddenAt; }
+    G.hiddenAt=0;
+    if(cur===&#x27;s-game&#x27;&amp;&amp;save.bgm) BGM.start();
+  }
+});
+addEventListener(&#x27;pagehide&#x27;,()=&gt;{ if(cur===&#x27;s-game&#x27;) saveProgress(); });
+
+/* 尺寸变化重排 */
+let rzTimer;
+window.addEventListener(&#x27;resize&#x27;,()=&gt;{
+  clearTimeout(rzTimer);
+  rzTimer=setTimeout(()=&gt;{ if(cur===&#x27;s-game&#x27;&amp;&amp;G.tiles.length) layout(); },120);
+});
+
+/* 键盘快捷键（桌面调试友好） */
+document.addEventListener(&#x27;keydown&#x27;,e=&gt;{
+  if(cur!==&#x27;s-game&#x27;) return;
+  if(e.key===&#x27;r&#x27;) startLevel(G.lv);
+  if(e.key===&#x27;1&#x27;) doShuffle();
+  if(e.key===&#x27;2&#x27;) doUndo();
+  if(e.key===&#x27;3&#x27;) doOut();
+});
+
+/* 首次交互解锁音频 */
+document.addEventListener(&#x27;pointerdown&#x27;,()=&gt;ac(),{once:true});
+
+/* ============ 启动 ============ */
+/* 页面级渲染函数跑完自动补一次翻译。逐个手工补必然漏 ——
+   这轮已经漏过 updateChips、对局页标题、失败页三处。
+   对局内的高频渲染（renderTray/renderTools）不包，避免每次点牌都遍历 DOM，
+   它们由 startLevel 与 renderGoal 处的显式 relang 覆盖。 */
+[&#x27;renderHome&#x27;,&#x27;renderLevels&#x27;,&#x27;renderShop&#x27;,&#x27;renderRank&#x27;,&#x27;renderDex&#x27;,&#x27;renderHelp&#x27;,
+ &#x27;renderFarm&#x27;,&#x27;renderAch&#x27;,&#x27;renderMine&#x27;,&#x27;renderTasks&#x27;,&#x27;renderCheckin&#x27;,&#x27;renderDexEx&#x27;,
+ &#x27;renderGoal&#x27;,&#x27;renderFailTips&#x27;].forEach(n=&gt;{
+  const f = window[n];
+  if(typeof f !== &#x27;function&#x27;) return;
+  window[n] = function(){ const r = f.apply(this, arguments); relang(); return r; };
+});
+
+function boot(){
+  detectFA();
+  applyLang(document.body);   /* 启动页与标题也归语言管，别等到进首页才翻 */
+  syncDocTitle();
+  FX.init();
+  applySkin();
+  updateChips();
+  renderTools();
+  $(&#x27;#btn-sound&#x27;).innerHTML=&#x27;&lt;i class=&quot;fa-solid &#x27;+(save.sound?&#x27;fa-volume-high&#x27;:&#x27;fa-volume-xmark&#x27;
+)+&#x27;&quot;&gt;&lt;/i&gt;&#x27;;
+  setTimeout(()=&gt;{ if(cur===&#x27;s-splash&#x27;) go(&#x27;s-home&#x27;); },2200);
+  $(&#x27;#s-splash&#x27;).onclick=()=&gt;{ if(cur===&#x27;s-splash&#x27;) go(&#x27;s-home&#x27;); };   /* 允许跳过 */
+}
+boot();</pre></div><div class="ft">第 56 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>window.addEventListener(&#x27;load&#x27;,()=&gt;{
+  const before=FA_OK;
+  detectFA();
+  if(before!==FA_OK &amp;&amp; cur===&#x27;s-game&#x27;) buildBoard();
+});
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+
+
+/* ===== 安卓版 android/java/com/cityg/caoyuan/MainActivity.java ===== */
+package com.cityg.caoyuan;
+
+import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
+import android.graphics.Color;
+import android.os.Bundle;
+import android.view.View;
+import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+
+/**
+ * 只是一个装游戏的壳：一个全屏 WebView 加载 assets 里的单文件游戏。
+ * 没有网络权限，所有资源都在包内。
+ */
+public class MainActivity extends Activity {
+
+    private WebView web;
+
+    @Override
+    protected void onCreate(Bundle state) {
+        super.onCreate(state);
+
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+        getWindow().setStatusBarColor(Color.parseColor(&quot;#F6FAF0&quot;));
+        getWindow().setNavigationBarColor(Color.parseColor(&quot;#FFFFFF&quot;));
+        // 状态栏是浅色底，图标要转成深色，否则白字看不见
+        View decor = getWindow().getDecorView();
+        decor.setSystemUiVisibility(decor.getSystemUiVisibility()
+                | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+
+        web = new WebView(this);
+        WebSettings s = web.getSettings();
+        s.setJavaScriptEnabled(true);
+        // 存档全靠 localStorage，这一项不开的话进度一关就没
+        s.setDomStorageEnabled(true);
+        s.setDatabaseEnabled(true);
+        s.setAllowFileAccess(true);
+        s.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        // 音效与背景音乐是合成音，不该要求先点一下才能响
+        s.setMediaPlaybackRequiresUserGesture(false);
+        // 不跟随系统字体缩放，否则版式会被撑坏
+        s.setTextZoom(100);
+        s.setSupportZoom(false);</pre></div><div class="ft">第 57 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>        s.setBuiltInZoomControls(false);
+
+        web.addJavascriptInterface(new Clip(), &quot;AndroidClip&quot;);
+        web.setWebViewClient(new WebViewClient() {
+            @Override public void onPageFinished(WebView v, String url) {
+                // file:// 是不安全来源，navigator.clipboard 根本不存在，
+                // 暗号「复制」会静默失败。这里补一个同名实现，页面代码不用改
+                v.evaluateJavascript(
+                    &quot;(function(){ if(!navigator.clipboard &amp;&amp; window.AndroidClip){&quot;
+                  + &quot;  navigator.clipboard={writeText:function(t){&quot;
+                  + &quot;    try{ AndroidClip.set(String(t)); return Promise.resolve(); }&quot;
+                  + &quot;    catch(e){ return Promise.reject(e); } }};&quot;
+                  + &quot;}})()&quot;, null);
+            }
+        });
+        web.setBackgroundColor(Color.parseColor(&quot;#F6FAF0&quot;));
+        web.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        web.setLongClickable(false);
+
+        setContentView(web);
+        web.loadUrl(&quot;file:///android_asset/index.html&quot;);
+    }
+
+    /**
+     * 游戏是单页应用，没有浏览器历史可退。返回键交给页面判断：
+     * 不在首页就回首页（在局中先存进度），已在首页才退出。
+     */
+    @Override
+    public void onBackPressed() {
+        if (web == null) { super.onBackPressed(); return; }
+        web.evaluateJavascript(
+            &quot;(function(){try{&quot;
+          + &quot;  if(typeof cur!==&#x27;undefined&#x27;&amp;&amp;cur!==&#x27;s-home&#x27;){&quot;
+          + &quot;    if(cur===&#x27;s-game&#x27;&amp;&amp;typeof saveProgress===&#x27;function&#x27;) saveProgress();&quot;
+          + &quot;    go(&#x27;s-home&#x27;); return &#x27;stay&#x27;;&quot;
+          + &quot;  }&quot;
+          + &quot;}catch(e){} return &#x27;exit&#x27;;})()&quot;,
+            new ValueCallback&lt;String&gt;() {
+                @Override public void onReceiveValue(String v) {
+                    if (v == null || v.contains(&quot;exit&quot;)) finish();
+                }
+            });
+    }
+
+    /** 切后台时让页面自己存一次盘，防止被系统杀掉丢进度 */
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (web != null) {
+            web.evaluateJavascript(
+                &quot;try{ if(typeof cur!==&#x27;undefined&#x27;&amp;&amp;cur===&#x27;s-game&#x27;&amp;&amp;typeof saveProgress===&#x27;functi
+on&#x27;) saveProgress(); }catch(e){}&quot;,
+                null);
+            web.onPause();
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();</pre></div><div class="ft">第 58 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>        if (web != null) web.onResume();
+    }
+
+    /** 只暴露一个写剪贴板的方法，不给页面任何其它系统能力 */
+    private class Clip {
+        @JavascriptInterface
+        public void set(String text) {
+            ClipboardManager cm =
+                (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            if (cm != null) cm.setPrimaryClip(ClipData.newPlainText(&quot;暗号&quot;, text));
+        }
+    }
+}
+
+
+/* ===== 安卓版 android/AndroidManifest.xml ===== */
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+&lt;!-- 没有 INTERNET 权限：这个游戏完全离线，装完不联网也能玩 --&gt;
+&lt;manifest xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;
+    package=&quot;com.cityg.caoyuan&quot;
+    android:versionCode=&quot;115&quot;
+    android:versionName=&quot;1.0&quot;&gt;
+
+  &lt;uses-sdk android:minSdkVersion=&quot;21&quot; android:targetSdkVersion=&quot;34&quot; /&gt;
+
+  &lt;application
+      android:label=&quot;@string/app_name&quot;
+      android:icon=&quot;@drawable/ic_launcher&quot;
+      android:roundIcon=&quot;@drawable/ic_launcher&quot;
+      android:theme=&quot;@android:style/Theme.Material.Light.NoActionBar&quot;
+      android:hardwareAccelerated=&quot;true&quot;
+      android:allowBackup=&quot;true&quot;&gt;
+
+    &lt;activity
+        android:name=&quot;.MainActivity&quot;
+        android:exported=&quot;true&quot;
+        android:screenOrientation=&quot;portrait&quot;
+        android:configChanges=&quot;orientation|screenSize|keyboardHidden|uiMode|smallestScreenSize|s
+creenLayout&quot;&gt;
+      &lt;intent-filter&gt;
+        &lt;action android:name=&quot;android.intent.action.MAIN&quot; /&gt;
+        &lt;category android:name=&quot;android.intent.category.LAUNCHER&quot; /&gt;
+      &lt;/intent-filter&gt;
+    &lt;/activity&gt;
+  &lt;/application&gt;
+&lt;/manifest&gt;
+
+
+/* ===== 安卓版 android/res/values/strings.xml ===== */
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+&lt;resources&gt;
+  &lt;string name=&quot;app_name&quot;&gt;羊羊羊之草原牧歌&lt;/string&gt;
+&lt;/resources&gt;
+
+
+/* ===== 安卓版 android/res/drawable/ic_launcher.xml ===== */
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+&lt;!-- 用矢量图当图标：省掉一整套 mipmap 位图，也不需要图像工具 --&gt;
+&lt;vector xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;
+    android:width=&quot;108dp&quot; android:height=&quot;108dp&quot;</pre></div><div class="ft">第 59 页</div></div><div class="page"><div class="hd"><b>羊羊羊之草原牧歌休闲消除游戏软件</b><span>V1.0</span></div><div class="body"><pre>    android:viewportWidth=&quot;108&quot; android:viewportHeight=&quot;108&quot;&gt;
+
+  &lt;!-- 底色：草原绿 --&gt;
+  &lt;path android:fillColor=&quot;#2E6B3E&quot;
+        android:pathData=&quot;M0,0h108v108h-108z&quot; /&gt;
+
+  &lt;!-- 远山 --&gt;
+  &lt;path android:fillColor=&quot;#3C7C4C&quot;
+        android:pathData=&quot;M0,78 C18,62 34,74 54,66 C74,58 90,72 108,62 L108,108 L0,108 Z&quot; /&gt;
+
+  &lt;!-- 羊身：三团白云状 --&gt;
+  &lt;path android:fillColor=&quot;#FFFFFF&quot;
+        android:pathData=&quot;M36,52 m-13,0 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0z&quot; /&gt;
+  &lt;path android:fillColor=&quot;#FFFFFF&quot;
+        android:pathData=&quot;M54,44 m-14,0 a14,14 0 1,0 28,0 a14,14 0 1,0 -28,0z&quot; /&gt;
+  &lt;path android:fillColor=&quot;#FFFFFF&quot;
+        android:pathData=&quot;M72,52 m-13,0 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0z&quot; /&gt;
+  &lt;path android:fillColor=&quot;#FFFFFF&quot;
+        android:pathData=&quot;M54,60 m-16,0 a16,16 0 1,0 32,0 a16,16 0 1,0 -32,0z&quot; /&gt;
+
+  &lt;!-- 羊脸 --&gt;
+  &lt;path android:fillColor=&quot;#EAF3E4&quot;
+        android:pathData=&quot;M54,66 m-9,0 a9,10 0 1,0 18,0 a9,10 0 1,0 -18,0z&quot; /&gt;
+  &lt;!-- 眼睛 --&gt;
+  &lt;path android:fillColor=&quot;#2E6B3E&quot;
+        android:pathData=&quot;M50,64 m-1.6,0 a1.6,1.6 0 1,0 3.2,0 a1.6,1.6 0 1,0 -3.2,0z&quot; /&gt;
+  &lt;path android:fillColor=&quot;#2E6B3E&quot;
+        android:pathData=&quot;M58,64 m-1.6,0 a1.6,1.6 0 1,0 3.2,0 a1.6,1.6 0 1,0 -3.2,0z&quot; /&gt;
+&lt;/vector&gt;
+</pre></div><div class="ft">第 60 页</div></div></body></html>

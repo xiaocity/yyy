@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>羊羊羊之草原牧歌 · 小游戏渲染测试壳</title>
+<style>
+  body{margin:0;background:#2b3128;display:flex;align-items:center;justify-content:center;
+       min-height:100vh;font-family:system-ui,sans-serif}
+  .phone{width:390px;height:844px;background:#F6FAF0;border-radius:34px;overflow:hidden;
+         box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  canvas{display:block}
+</style>
+</head>
+<body>
+<!-- 这个壳只在开发机上用：把小游戏的同一份 js 跑在浏览器里，
+     好在没有微信开发者工具时也能验证渲染与交互。发布包里不含本文件。 -->
+<div class="phone"><canvas id="cv"></canvas></div>
+<script src="js/core.js"></script>
+<script src="js/plat.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/save.js"></script>
+<script src="js/sfx.js"></script>
+<script src="js/page.js"></script>
+<script src="js/scene_game.js"></script>
+<script src="js/scene_home.js"></script>
+<script src="js/scene_levels.js"></script>
+<script src="js/scene_more.js"></script>
+<script src="js/main.js"></script>
+<script>
+  window.STAGE = MAIN.boot({ canvas: document.getElementById('cv'), width: 390, height: 844, dpr: 2 });
+</script>
+</body>
+</html>
