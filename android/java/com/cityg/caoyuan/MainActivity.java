@@ -5,14 +5,20 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.graphics.Color;
+import android.graphics.Insets;
+import android.os.Build;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.View;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
 
 /**
  * 只是一个装游戏的壳：一个全屏 WebView 加载 assets 里的单文件游戏。
@@ -20,19 +26,18 @@ import android.webkit.WebViewClient;
  */
 public class MainActivity extends Activity {
 
+    /** 和页面 CSS 的 --cream 同色：状态栏区域要和页面顶部接上，不能有色差接缝 */
+    private static final int CREAM = Color.parseColor("#F6FAF0");
+    /** 和页面 CSS 的 --paper 同色：底部 tabbar 是白的，导航栏区域要跟着白 */
+    private static final int PAPER = Color.parseColor("#FFFFFF");
+
     private WebView web;
+    /** 垫在导航栏那一条下面的白块，高度由 insets 决定 */
+    private View navScrim;
 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
-
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-        getWindow().setStatusBarColor(Color.parseColor("#F6FAF0"));
-        getWindow().setNavigationBarColor(Color.parseColor("#FFFFFF"));
-        // 状态栏是浅色底，图标要转成深色，否则白字看不见
-        View decor = getWindow().getDecorView();
-        decor.setSystemUiVisibility(decor.getSystemUiVisibility()
-                | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
 
         web = new WebView(this);
         WebSettings s = web.getSettings();
@@ -62,12 +67,84 @@ public class MainActivity extends Activity {
                   + "}})()", null);
             }
         });
-        web.setBackgroundColor(Color.parseColor("#F6FAF0"));
+        web.setBackgroundColor(CREAM);
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
         web.setLongClickable(false);
 
-        setContentView(web);
+        setContentView(buildRoot());
         web.loadUrl("file:///android_asset/index.html");
+    }
+
+    /**
+     * 顶层容器。
+     *
+     * targetSdk 35 起，Android 15+ 强制 edge-to-edge：窗口一律铺到状态栏和导航栏底下，
+     * setStatusBarColor / setNavigationBarColor 变成空操作。页面里 class="statusbar"
+     * 那个假状态栏是死 CSS（HTML 里一次都没用），所以顶部没有任何缓冲，不自己让开的话
+     * 首页标题会直接被真状态栏压住。
+     *
+     * 这里的做法是把 insets 吃在原生这一层：容器铺满并涂成 --cream，WebView 按 insets
+     * 内缩，导航栏那一条另外垫一块白的。结果和 targetSdk 34 时代的观感一致
+     * （米色状态栏 + 白色导航栏），页面一行 CSS 都不用改。
+     *
+     * API 30 以下不走这条路：那些系统上窗口本来就会自动内缩，保持原来的做法即可。
+     */
+    private View buildRoot() {
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(CREAM);
+        root.addView(web, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT));
+
+        navScrim = new View(this);
+        navScrim.setBackgroundColor(PAPER);
+        root.addView(navScrim, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, 0, Gravity.BOTTOM));
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            getWindow().setDecorFitsSystemWindows(false);
+            // 系统栏交给我们自己涂，别让系统再盖一层灰色对比度蒙版
+            getWindow().setStatusBarColor(Color.TRANSPARENT);
+            getWindow().setNavigationBarColor(Color.TRANSPARENT);
+            getWindow().setStatusBarContrastEnforced(false);
+            getWindow().setNavigationBarContrastEnforced(false);
+            // 两条栏底下都是浅色，图标必须转深色，否则白图标看不见
+            WindowInsetsController c = getWindow().getInsetsController();
+            if (c != null) {
+                int light = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                          | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+                c.setSystemBarsAppearance(light, light);
+            }
+            root.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+                @Override public WindowInsets onApplyWindowInsets(View v, WindowInsets in) {
+                    Insets bar = in.getInsets(WindowInsets.Type.systemBars()
+                                            | WindowInsets.Type.displayCutout());
+                    // 用外边距而不是 padding 把 WebView 摆进去：WebView 对 padding 的
+                    // 处理和普通 View 不一样，实测顶部那一份根本不吃（底部却吃），
+                    // 页面照样被状态栏压住。外边距由 FrameLayout 说了算，没有歧义。
+                    FrameLayout.LayoutParams lp =
+                            (FrameLayout.LayoutParams) web.getLayoutParams();
+                    lp.leftMargin = bar.left;
+                    lp.topMargin = bar.top;
+                    lp.rightMargin = bar.right;
+                    lp.bottomMargin = bar.bottom;
+                    web.setLayoutParams(lp);
+                    navScrim.getLayoutParams().height = bar.bottom;
+                    navScrim.requestLayout();
+                    // 吃掉不再往下传：WebView 自己也会看 insets 算 env(safe-area-inset-*)，
+                    // 不拦住的话底部 tabbar 会在原生 padding 之上再让一次，白留一条
+                    return WindowInsets.CONSUMED;
+                }
+            });
+        } else {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+            getWindow().setStatusBarColor(CREAM);
+            getWindow().setNavigationBarColor(PAPER);
+            View decor = getWindow().getDecorView();
+            decor.setSystemUiVisibility(decor.getSystemUiVisibility()
+                    | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+        }
+        return root;
     }
 
     /**

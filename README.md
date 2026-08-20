@@ -27,7 +27,7 @@
 ```
 index.html              游戏本体（单文件，约 500 KB）
 android/                安卓工程
-  build.ps1             一条命令出包
+  build.ps1             一条命令出 AAB + 自测 APK
   java/                 WebView 容器
 minigame/               微信小游戏
   extract_core.py       从 index.html 抽取核心算法
@@ -46,7 +46,8 @@ minigame/               微信小游戏
 
 ### 安卓包
 
-依赖 JDK 17 与 `D:\android-sdk`（`platforms;android-34` + `build-tools;34.0.0`）。
+依赖 JDK 17、`D:\android-sdk`（`platforms;android-36` + `build-tools;36.0.0`），
+以及 `D:\android-sdk\bundletool\bundletool-all.jar`（从 [bundletool releases](https://github.com/google/bundletool/releases) 下载后改成这个名字）。
 
 首次构建前先新建 `android/keystore.local.ps1`（该文件已在 `.gitignore` 中）：
 
@@ -59,6 +60,17 @@ $env:CAOYUAN_KS_PASS = '你的签名口令'
 ```powershell
 powershell -ExecutionPolicy Bypass -File android\build.ps1
 ```
+
+产出两个文件：
+
+| 文件 | 用途 |
+|---|---|
+| `羊羊羊之草原牧歌.aab` | 传 Google Play。2021 年 8 月起新应用只收 App Bundle，传 APK 会被拒收 |
+| `羊羊羊之草原牧歌.apk` | 本地 `adb install` 自测。由 bundletool 从 AAB 生成的 universal 包 |
+
+APK 是从 AAB 反过来生成的，不是另走一条流水线 —— 自测装的那个包和传上去的 bundle
+同源；而且这一步顺带把 bundle 完整走了一遍，结构有问题在本地就会炸，不用等传到
+Play 才知道。
 
 脚本每次都从 `index.html` 重新复制游戏本体，不会打出带旧版资源的包。
 
