@@ -54,6 +54,16 @@
       "port": 5181
     },
     {
+      "name": "sheep-econ",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5183"
+      ],
+      "port": 5183
+    },
+    {
       "name": "sheep-ui2",
       "runtimeExecutable": "python",
       "runtimeArgs": [
