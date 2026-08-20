@@ -85,7 +85,7 @@ WANT = [
     ('function', 'genLevel'),
     ('function', 'retimeBombs'), ('function', 'verifyPlayable'), ('function', 'reshuffleSolvable'),
     ('const', 'SHEEP'), ('const', 'RARITY'), ('const', 'PASSIVE_TXT'), ('const', 'SHARD_NEED'),
-    ('const', 'SHARD_MAX'), ('const', 'PITY_N'), ('const', 'EXCHANGE'),
+    ('const', 'PITY_N'),
     ('const', 'TOOL_UP'), ('const', 'PRICE'), ('const', 'TOOL_KEYS'), ('const', 'FARM'),
     ('const', 'ACH'), ('const', 'TITLES'), ('const', 'CK_COIN'), ('const', 'TASKS'),
     ('const', 'HELP_BASE'), ('const', 'HELP_MODES'), ('const', 'SAYINGS'),
@@ -104,7 +104,7 @@ EXPORTS = [
     'solveOrder', 'solveOrderLocked', 'canonicalStats',
     'genLevel', 'makeCode', 'parseCode', 'weekIndex', 'weeklyMod', 'dailySeed',
     'reshuffleSolvable', 'paintOrder', 'applySpecials',
-    'SHEEP', 'RARITY', 'PASSIVE_TXT', 'SHARD_NEED', 'SHARD_MAX', 'PITY_N', 'EXCHANGE',
+    'SHEEP', 'RARITY', 'PASSIVE_TXT', 'SHARD_NEED', 'PITY_N',
     'TOOL_UP', 'PRICE', 'TOOL_KEYS', 'FARM', 'ACH', 'TITLES', 'CK_COIN', 'TASKS',
     'HELP_BASE', 'HELP_MODES', 'SAYINGS',
 ]

@@ -156,10 +156,13 @@ function spMix(lv){
   const m={};
   if(lv>=3)  m.coin=.05;
   if(lv>=4)  m.dbl=.10;
-  if(lv>=5)  m.wool=.03;
+  if(lv>=5)  m.wool=.015;
   if(lv>=6)  m.rain=.09;
   if(lv>=8)  m.freeze=.08;
-  if(lv>=9)  m.gift=.02;
+  /* 礼盒牌只在宝箱关出（见 rawLevelDef 的 .02）。普通关每关白送一件的话，
+     单周目白拿 35 件，金币唯一的出口直接失效、溢出十倍。
+     顺带提醒：比率必须过得了 Math.round(总张数*比率) 这一关 —— 曾经写成
+     .003，在最大 120 张的盘面上算出来 0.36 取整为 0，全游戏一张都不生成。 */
   if(lv>=12) m.chain=.05;
   if(lv>=14) m.supply=.05;
   if(lv>=16) m.mystery=.07;
@@ -194,7 +197,7 @@ function rawLevelDef(lv){
     /* 宝箱关：稳赢 + 必掉图鉴，作用是给曲线一个喘息，不是给难度 */
     return { name:'宝箱营地', bonus:true, cfg:{
       n:36, layers:4, types:5, q:[6], d:3, shape:shapeOf(lv),
-      sp:{rain:.10, coin:.14, wool:.10, gift:.06}
+      sp:{rain:.10, coin:.05, wool:.02, gift:.02}
     }};
   }
   if(lv<=LEVELS.length){
@@ -716,7 +719,7 @@ const SAYINGS=[
 
 const CK_COIN=[20,25,30,40,50,60,100];
 
-const PRICE={shuffle:120,undo:80,out:200};
+const PRICE={shuffle:800,undo:500,out:1200};
 
 const HELP_BASE=[
   ['fa-layer-group','怎么算赢','点击盘面上没被压住的牌，它会飞进下方卡槽；卡槽里凑齐 3 张同花色自动消除。把盘面、卡槽、彩虹槽全部清空就算过关。'],
@@ -728,7 +731,7 @@ const HELP_BASE=[
 const HELP_MODES=[
   /* 章节数按 CHAPTERS.length 说：50 关 ÷ CH_SIZE(10) = 5 章，原来写的「四个章节」
      与 CHAPTERS 里实际的五个章节对不上。宝箱关 isBonus 排除了前 12 关，第一章没有 */
-  ['fa-map','闯关','50 关，五个章节。每章第 10 关是 BOSS 关；第二章起每章第 5 关是宝箱关，金币翻倍、必掉图鉴。'],
+  ['fa-map','闯关','50 关，五个章节。每章第 10 关是 BOSS 关；第二章起每章第 5 关是宝箱关，图鉴掉落判定三次、必出。'],
   ['fa-calendar-day','每日挑战','全服同一套题面，每天换一次。因为同题，成绩才有可比性。'],
   ['fa-calendar-week','周常挑战','每周一换一套变体规则（窄槽、迷雾、爆破等），同一周内全服相同。'],
   ['fa-infinity','无尽草原','一波清完接下一波，每波更难，中途可选增益。比的是累计消除组数。']
@@ -775,19 +778,18 @@ const PASSIVE_TXT={
   luck:v=>'通关必定掉落一只羊'
 };
 
-const SHARD_NEED=[0,3,8];
+const SHARD_NEED=[0,2,4];
 
-const SHARD_MAX=8;
-
-const PITY_N=12;
-
-const EXCHANGE={1:6, 2:12, 3:25};
+const PITY_N=8;
 
 const FARM=[
-  {id:'grass', n:'青草地', ico:'fa-seedling', max:5, cost:l=>60+l*40,  desc:l=>'金币产出 +'+(l*2)+'%'},
-  {id:'mill',  n:'风车',   ico:'fa-fan',       max:5, cost:l=>80+l*50,  desc:l=>'羊毛产出 +'+(l*2)+'%'},
-  {id:'fence', n:'围栏',   ico:'fa-border-all',max:5, cost:l=>70+l*45,  desc:l=>'商店道具便宜 '+(l*3)+'%'},
-  {id:'pen',   n:'羊圈',   ico:'fa-house-chimney', max:5, cost:l=>90+l*60, desc:l=>'图鉴掉落率 +'+(l*4)+'%'}
+  /* 上限 8 而不是 5：沉淀只有 7470 时，20 分钟/天的玩家第 8–11 天就把牧场、
+     皮肤、道具升级全买空，之后羊毛继续涨却再也没有出口。成本函数原样往上延伸，
+     四条合计 5520 → 11136。代价是各项效果的上限也跟着抬（见 coinMul 那里的注释）。 */
+  {id:'grass', n:'青草地', ico:'fa-seedling', max:8, cost:l=>96+l*64,  desc:l=>'金币产出 +'+(l*2)+'%'},
+  {id:'mill',  n:'风车',   ico:'fa-fan',       max:8, cost:l=>128+l*80, desc:l=>'羊毛产出 +'+(l*2)+'%'},
+  {id:'fence', n:'围栏',   ico:'fa-border-all',max:8, cost:l=>112+l*72, desc:l=>'商店道具便宜 '+(l*3)+'%'},
+  {id:'pen',   n:'羊圈',   ico:'fa-house-chimney', max:8, cost:l=>144+l*96, desc:l=>'图鉴掉落率 +'+(l*4)+'%'}
 ];
 
 const TOOL_UP={
@@ -797,42 +799,43 @@ const TOOL_UP={
 };
 
 const ACH=[
-  ['first','初次放羊','通关第 1 关',s=>s.cleared>=1,20],
-  ['c5','小有所成','累计通关 5 关',s=>s.cleared>=5,20],
-  ['c15','熟能生巧','累计通关 15 关',s=>s.cleared>=15,30],
-  ['c40','牧场老手','累计通关 40 关',s=>s.cleared>=40,50],
-  ['c80','草原传说','累计通关 80 关',s=>s.cleared>=80,80],
-  ['lv5','越走越远','解锁到第 5 关',s=>s.level>=5,20],
-  ['lv12','出了新手村','解锁到第 12 关',s=>s.level>=12,30],
-  ['lv21','翻过雪线','解锁到第 21 关',s=>s.level>=21,50],
-  ['lv31','走到星夜','解锁到第 31 关',s=>s.level>=31,80],
-  ['st10','攒星星','累计 10 颗星',s=>starTotal()>=10,20],
-  ['st30','三十而立','累计 30 颗星',s=>starTotal()>=30,40],
-  ['st60','星光满地','累计 60 颗星',s=>starTotal()>=60,70],
-  ['st99','星河灿烂','累计 99 颗星',s=>starTotal()>=99,120],
-  ['perfect','一尘不染','有 1 关拿到三星',s=>Object.values(s.stars||{}).some(v=>v>=3),25],
-  ['perfect5','五星连珠','有 5 关拿到三星',s=>Object.values(s.stars||{}).filter(v=>v>=3).length>=5,45],
-  ['perfect15','完美主义','有 15 关拿到三星',s=>Object.values(s.stars||{}).filter(v=>v>=3).length>=15,90],
-  ['combo5','小连击','单局连击达到 5',s=>(s.st.bestCombo||0)>=5,20],
-  ['combo10','连击好手','单局连击达到 10',s=>(s.st.bestCombo||0)>=10,35],
-  ['combo20','连击大师','单局连击达到 20',s=>(s.st.bestCombo||0)>=20,70],
-  ['m100','消了一百组','累计消除 100 组',s=>(s.st.matches||0)>=100,20],
-  ['m500','消了五百组','累计消除 500 组',s=>(s.st.matches||0)>=500,40],
-  ['m2000','消除机器','累计消除 2000 组',s=>(s.st.matches||0)>=2000,90],
-  ['boss1','初见 Boss','通关 1 个 Boss 关',s=>(s.st.boss||0)>=1,40],
-  ['boss3','Boss 克星','通关 3 个 Boss 关',s=>(s.st.boss||0)>=3,80],
-  ['notool','徒手过关','不用任何道具通关 1 次',s=>(s.st.noTool||0)>=1,25],
-  ['notool10','老手风范','不用道具通关 10 次',s=>(s.st.noTool||0)>=10,60],
-  ['daily1','今日打卡','完成 1 次每日挑战',s=>(s.st.daily||0)>=1,25],
-  ['daily7','坚持一周','完成 7 次每日挑战',s=>(s.st.daily||0)>=7,70],
-  ['endless20','无尽入门','无尽模式消 20 组',s=>(s.endless||0)>=20,25],
-  ['endless60','无尽好手','无尽模式消 60 组',s=>(s.endless||0)>=60,60],
-  ['dex5','小小收藏家','收集 5 只羊',s=>Object.keys(s.dex||{}).length>=5,30],
-  ['dex12','半个图鉴','收集 12 只羊',s=>Object.keys(s.dex||{}).length>=12,60],
-  ['dex24','图鉴全满','收集全部 24 只羊',s=>Object.keys(s.dex||{}).length>=24,150],
-  ['sr','传说降临','收集到 1 只传说羊',s=>Object.keys(s.dex||{}).some(id=>SHEEP_BY[id]&&SHEEP_BY[id].r===3),80],
-  ['farm5','初具规模','牧场建设累计 5 级',s=>Object.values(s.farm||{}).reduce((a,b)=>a+b,0)>=5,40],
-  ['farm20','牧场主','牧场全部建满',s=>Object.values(s.farm||{}).reduce((a,b)=>a+b,0)>=20,120]
+  ['first','初次放羊','通关第 1 关',s=>s.cleared>=1,12],
+  ['c5','小有所成','累计通关 5 关',s=>s.cleared>=5,12],
+  ['c15','熟能生巧','累计通关 15 关',s=>s.cleared>=15,18],
+  ['c40','牧场老手','累计通关 40 关',s=>s.cleared>=40,30],
+  ['c80','草原传说','累计通关 80 关',s=>s.cleared>=80,48],
+  ['lv5','越走越远','解锁到第 5 关',s=>s.level>=5,12],
+  ['lv12','出了新手村','解锁到第 12 关',s=>s.level>=12,18],
+  ['lv21','翻过雪线','解锁到第 21 关',s=>s.level>=21,30],
+  ['lv31','走到星夜','解锁到第 31 关',s=>s.level>=31,48],
+  ['st10','攒星星','累计 10 颗星',s=>starTotal()>=10,12],
+  ['st30','三十而立','累计 30 颗星',s=>starTotal()>=30,24],
+  ['st60','星光满地','累计 60 颗星',s=>starTotal()>=60,42],
+  ['st99','星河灿烂','累计 99 颗星',s=>starTotal()>=99,72],
+  ['perfect','一尘不染','有 1 关拿到三星',s=>Object.values(s.stars||{}).some(v=>v>=3),15],
+  ['perfect5','五星连珠','有 5 关拿到三星',s=>Object.values(s.stars||{}).filter(v=>v>=3).length>=5,27],
+  ['perfect15','完美主义','有 15 关拿到三星',s=>Object.values(s.stars||{}).filter(v=>v>=3).length>=15,54],
+  ['combo5','小连击','单局连击达到 5',s=>(s.st.bestCombo||0)>=5,12],
+  ['combo10','连击好手','单局连击达到 10',s=>(s.st.bestCombo||0)>=10,21],
+  ['combo20','连击大师','单局连击达到 20',s=>(s.st.bestCombo||0)>=20,42],
+  ['m100','消了一百组','累计消除 100 组',s=>(s.st.matches||0)>=100,12],
+  ['m500','消了五百组','累计消除 500 组',s=>(s.st.matches||0)>=500,24],
+  ['m2000','消除机器','累计消除 2000 组',s=>(s.st.matches||0)>=2000,54],
+  ['boss1','初见 Boss','通关 1 个 Boss 关',s=>Object.keys(s.stars||{}).filter(k=>isBoss(+k)).length>=1,24],
+  /* 按「通关过几个不同的 Boss 关」算，而不是累计次数 —— 否则重打同一关三次就拿到了 */
+  ['boss3','Boss 克星','通关 3 个 Boss 关',s=>Object.keys(s.stars||{}).filter(k=>isBoss(+k)).length>=3,48],
+  ['notool','徒手过关','不用任何道具通关 1 次',s=>(s.st.noTool||0)>=1,15],
+  ['notool10','老手风范','不用道具通关 10 次',s=>(s.st.noTool||0)>=10,36],
+  ['daily1','今日打卡','完成 1 次每日挑战',s=>(s.st.daily||0)>=1,15],
+  ['daily7','坚持一周','完成 7 次每日挑战',s=>(s.st.daily||0)>=7,42],
+  ['endless20','无尽入门','无尽模式消 20 组',s=>(s.endless||0)>=20,15],
+  ['endless60','无尽好手','无尽模式消 60 组',s=>(s.endless||0)>=60,36],
+  ['dex5','小小收藏家','收集 5 只羊',s=>Object.keys(s.dex||{}).length>=5,18],
+  ['dex12','半个图鉴','收集 12 只羊',s=>Object.keys(s.dex||{}).length>=12,36],
+  ['dex24','图鉴全满','收集全部 24 只羊',s=>Object.keys(s.dex||{}).length>=24,90],
+  ['sr','传说降临','收集到 1 只传说羊',s=>Object.keys(s.dex||{}).some(id=>SHEEP_BY[id]&&SHEEP_BY[id].r===3),48],
+  ['farm5','初具规模','牧场建设累计 5 级',s=>Object.values(s.farm||{}).reduce((a,b)=>a+b,0)>=5,24],
+  ['farm20','牧场主','牧场全部建满',s=>Object.values(s.farm||{}).reduce((a,b)=>a+b,0)>=32,72]
 ];
 
 const TITLES=[
@@ -854,8 +857,8 @@ const TASKS=[
   {id:'match', stat:'matches', goals:[20,30,45], txt:g=>'累计消除 '+g+' 组',      coin:70,  wool:14},
   {id:'clear', stat:'clears',  goals:[1,2,3],    txt:g=>'通关 '+g+' 关',           coin:90,  wool:18},
   {id:'combo', stat:'combo',   goals:[4,5,6],    txt:g=>'单局达成 '+g+' 连击',     coin:80,  wool:16, max:true},
-  {id:'play',  stat:'plays',   goals:[3,5,7],    txt:g=>'开局 '+g+' 次',           coin:55,  wool:11},
-  {id:'spec',  stat:'spec',    goals:[6,10,15],  txt:g=>'消掉 '+g+' 张特殊牌',     coin:85,  wool:17},
+  {id:'play',  stat:'runs',    goals:[1,2,3],    txt:g=>'完成 '+g+' 局',           coin:55,  wool:11},
+  {id:'spec',  stat:'spec',    goals:[10,18,30],   txt:g=>'消掉 '+g+' 张奖励牌',     coin:85,  wool:17},
   {id:'daily', stat:'dailyRun',goals:[1],        txt:()=>'完成一次每日挑战',        coin:110, wool:22}
 ];
 
@@ -923,9 +926,7 @@ var CORE = {
   RARITY: RARITY,
   PASSIVE_TXT: PASSIVE_TXT,
   SHARD_NEED: SHARD_NEED,
-  SHARD_MAX: SHARD_MAX,
   PITY_N: PITY_N,
-  EXCHANGE: EXCHANGE,
   TOOL_UP: TOOL_UP,
   PRICE: PRICE,
   TOOL_KEYS: TOOL_KEYS,

@@ -98,6 +98,14 @@ section.on{display:flex}
 .btn-main.small:not(.ghost){background:linear-gradient(180deg,#3A7F4B 0%,#2F6F41 100%)}
 .btn-main.small{padding:13px;font-size:14px;border-radius:18px;letter-spacing:1px;
   box-shadow:0 5px 0 #275935,0 10px 16px rgba(58,127,75,.22)}
+
+/* 删除性操作的确认键不能和普通主按钮长得一样。放在 .small 之后，
+   否则同优先级下 .small 的绿色阴影会赢。
+   #B34A42 配白字 5.30:1 —— 14px 粗体不算「大字」，得按 4.5:1 卡，
+   更亮的 #C0574F 只有 4.45:1，差一点点 */
+.btn-main.danger:not(.ghost){background:linear-gradient(180deg,#C25A51 0%,#B34A42 100%);
+  box-shadow:0 5px 0 #8E3A33,0 10px 16px rgba(179,74,66,.24)}
+.btn-main.danger:active{box-shadow:0 2px 0 #8E3A33,0 8px 14px rgba(179,74,66,.2)}
 .btn-main.small:active{top:3px;box-shadow:0 2px 0 #275935}
 .btn-main.small.ghost{box-shadow:0 6px 0 #E2EDD8,0 10px 16px rgba(46,107,62,.1)}
 
@@ -385,13 +393,6 @@ section.on{display:flex}
 .skin.own .sk-tag{background:var(--mint);color:var(--forest)}
 .skin .sk-check{position:absolute;top:8px;right:8px;color:var(--forest);font-size:13px;display:none}
 .skin.wear .sk-check{display:block}
-.pass-card{margin-top:12px;background:linear-gradient(120deg,#EAF5DD,#D9EDC8);border:1.5px solid var(--line);border-radius:20px;padding:18px 16px;display:flex;align-items:center;gap:14px}
-.pass-card .p-ico{width:54px;height:54px;border-radius:50%;background:var(--forest);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 6px 14px rgba(46,107,62,.3);flex-shrink:0}
-.pass-card .p-info{flex:1}
-.pass-card .p-info b{font-size:14.5px;display:block}
-.pass-card .p-info span{font-size:10.5px;color:#6C8A6B;line-height:1.6;display:block;margin-top:3px}
-.pass-card .p-btn{padding:9px 16px;border-radius:999px;background:var(--forest);color:#fff;font-size:12px;font-weight:700;flex-shrink:0}
-.pass-card .p-btn:active{transform:scale(.93)}
 
 /* ============ 8. 我的 ============ */
 #s-mine .mine-body{padding:10px 22px 96px;position:relative;z-index:2;flex:1;overflow-y:auto;scrollbar-width:none}
@@ -534,13 +535,6 @@ section.on{display:flex}
 .dex-ex .ex-hd{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
 .dex-ex .ex-hd b{font-size:13px;color:var(--forest)}
 .dex-ex .ex-hd span{font-size:10px;color:#647A60;text-align:right;flex:1;min-width:0}
-.dex-ex .ex-row{display:flex;gap:8px;margin-top:10px}
-.dex-ex .ex-b{flex:1;background:var(--mint);border:1.5px solid var(--grass);border-radius:13px;padding:7px 4px;
-  color:var(--forest);display:flex;flex-direction:column;align-items:center;gap:2px}
-.dex-ex .ex-b b{font-size:12px}
-.dex-ex .ex-b span{font-size:9.5px;opacity:.8;font-family:var(--font-num)}
-.dex-ex .ex-b:active{transform:scale(.95)}
-.dex-ex .ex-b.off{background:#F2F5EF;border-color:var(--line);color:#A8B8A2}
 .dex-ex .ex-note{font-size:10px;color:#8AA085;margin-top:8px}
 .dex-hd,.ach-hd{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px}
 .dex-hd b,.ach-hd b{font-family:var(--font-num);font-size:19px;color:var(--forest)}
@@ -1285,9 +1279,8 @@ body.no-fa .fa-wind::before{content:'💨'}
     <div class="m-card" style="margin-top:14px">
       <div class="m-row" id="row-badge"><div class="m-ico"><i class="fa-solid fa-medal"></i></div><div class="m-t">成就徽章<span class="m-sub" id="badge-sub">已解锁 0 / 36 枚</span></div><span class="m-val" id="badge-n">0</span><i class="fa-solid fa-chevron-right m-arrow"></i></div>
       <div class="m-row" id="row-bag"><div class="m-ico"><i class="fa-solid fa-paw"></i></div><div class="m-t">羊图鉴<span class="m-sub" id="bag-sub">已收集 0 / 24</span></div><i class="fa-solid fa-chevron-right m-arrow"></i></div>
-      <div class="m-row" id="row-farm"><div class="m-ico"><i class="fa-solid fa-seedling"></i></div><div class="m-t">我的牧场<span class="m-sub" id="farm-row-sub">建设等级 0 / 20</span></div><i class="fa-solid fa-chevron-right m-arrow"></i></div>
+      <div class="m-row" id="row-farm"><div class="m-ico"><i class="fa-solid fa-seedling"></i></div><div class="m-t">我的牧场<span class="m-sub" id="farm-row-sub">建设等级 0 / 32</span></div><i class="fa-solid fa-chevron-right m-arrow"></i></div>
       <div class="m-row" id="row-help"><div class="m-ico"><i class="fa-solid fa-circle-info"></i></div><div class="m-t">玩法说明<span class="m-sub">牌面、道具、关卡目标与四种模式</span></div><i class="fa-solid fa-chevron-right m-arrow"></i></div>
-      <div class="m-row" id="row-cloud"><div class="m-ico warn"><i class="fa-solid fa-cloud"></i></div><div class="m-t">本地存档<span class="m-sub" id="cloud-sub">进度自动保存在本机</span></div><i class="fa-solid fa-chevron-right m-arrow"></i></div>
     </div>
     <div class="m-card">
       <div class="m-row" id="row-lang"><div class="m-ico" data-noi18n><b class="ico-txt">文A</b></div><div class="m-t" data-noi18n>语言</div><div class="lang-pick" id="lang-pick" data-noi18n></div></div>
@@ -1298,7 +1291,7 @@ body.no-fa .fa-wind::before{content:'💨'}
     </div>
     <div class="m-card">
       <div class="m-row" id="row-reset"><div class="m-ico danger"><i class="fa-solid fa-trash-can"></i></div><div class="m-t">清空进度<span class="m-sub">连点两次确认</span></div><i class="fa-solid fa-chevron-right m-arrow"></i></div>
-      <div class="m-row" id="row-about"><div class="m-ico"><i class="fa-solid fa-circle-info"></i></div><div class="m-t">关于本作</div><span class="m-val">V1.0</span><i class="fa-solid fa-chevron-right m-arrow"></i></div>
+      <div class="m-row" id="row-about"><div class="m-ico"><i class="fa-solid fa-circle-info"></i></div><div class="m-t">关于本作<span class="m-sub">进度只存在本机，卸载或清数据会丢失</span></div><span class="m-val">V1.0</span><i class="fa-solid fa-chevron-right m-arrow"></i></div>
     </div>
   </div>
   <nav class="tabbar">
@@ -1333,6 +1326,20 @@ body.no-fa .fa-wind::before{content:'💨'}
     <span class="ttl">玩法说明</span><span class="sp"></span>
   </div>
   <div class="help-body" id="help-body"></div>
+  <svg class="hills" style="bottom:0;opacity:.5"><use href="#hills-2"/></svg>
+</section>
+
+<!-- 关于：版本、数据去向、第三方署名。
+     原来这些东西分在两处 —— 版本号与 Font Awesome 署名压在「玩法说明」最后一张卡
+     里（那一页讲的是怎么玩，得翻到底才看得到），而「我的 → 关于本作」点下去只弹
+     一个写着版本号的 toast。想读许可声明的人找不到，想查版本的人只能看一眼就没。
+     CC BY 4.0 要求署名放在用户看得到的地方，这也是它不该只当 toast 的原因。 -->
+<section id="s-about">
+  <div class="page-hd">
+    <button class="back" data-go="s-mine"><i class="fa-solid fa-arrow-left"></i></button>
+    <span class="ttl">关于</span><span class="sp"></span>
+  </div>
+  <div class="help-body" id="about-body"></div>
   <svg class="hills" style="bottom:0;opacity:.5"><use href="#hills-2"/></svg>
 </section>
 
@@ -1409,6 +1416,25 @@ body.no-fa .fa-wind::before{content:'💨'}
     <div class="code-btns">
       <button class="btn-main small" id="code-go">开始</button>
       <button class="btn-main small ghost" id="code-cancel">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 清空进度的二次确认。原来是「连点两次」：第一下弹个 toast，3 秒内再点一下就
+     真删了。toast 会自己消失也不挡手，而这个动作删的是全部存档、且没有云端可恢复
+     —— 误触代价和确认强度完全不成比例。
+     文案每句独占一个文本节点：<b> 把句子切开的话，翻译是逐片替换的，
+     英文会拼成语序错乱的碎句。 -->
+<div class="sp-mask" id="resetMask">
+  <div class="sp-card">
+    <div class="sp-ico" style="background:#FDECEC;color:#C0574F"><i class="fa-solid fa-trash-can"></i></div>
+    <b>清空进度</b>
+    <p>将删除本机保存的全部进度：关卡、金币羊毛、羊图鉴、成就与设置，并回到第 1 关重新开始。</p>
+    <p><b>此操作无法撤销。</b></p>
+    <p class="sp-more">进度只存在本机，没有云端备份可以找回</p>
+    <div class="code-btns">
+      <button class="btn-main small danger" id="reset-go">确认清空</button>
+      <button class="btn-main small ghost" id="reset-cancel">取消</button>
     </div>
   </div>
 </div>
@@ -1534,8 +1560,8 @@ const TW_PHRASE = [
   [/公里/g,''],[/千里/g,'']
 ];
 /* 其余为一一对应，按字替换 */
-const TW_S = '与东两个丰临为么义乐书乱产亩亲仅从仓优会传体儿兑关内决冻凑击划则刚别剥务动励单历压参双变叠叶号启员园围图圆场坏块坚墙声壳够头奖学宝实宽对尘尽层属岛岭巅币师带帮并废开张弹归当录径总恼惊戏战挂损换据撑攒数断无时晒暂机权条来极构标栏树样档桥桦梦检榄欢毕气浏温湾满滩灯灿点烂烦独现盖盘码确礼离种称稳笼签粮紧红级纪纷纹线练组织经结给统继绩续缕编缠缤缩网联肤胜脸腾节范获莺萤营藓补见规览觉计认记设证试该语说请读谁谜谱负败货资赢车转软轻辅输边达过运还这进远连适选鉴银铺链销锁错长门闭问闯间队阳阴阵际随难雾静页顶项顺预领颗题颜额风飞饲饶馈鲜鸣麦齐后云几余里发黄没着万专买们价倾养写凉凭删势区却响处夹宁导尔届库应异弃强悬户执扩扰抛护拦择挤掷敌敛显术杂浅济涂涌涨渐烧热状环画积简类约细绘绝绿缀胶脉脚荡观视触让讲许论评识诉译误诺调谓质购贴费赋赖轮较辑迟逻邻钮键阀阶险隐须频饰驻验';
-const TW_T = '與東兩個豐臨為麼義樂書亂產畝親僅從倉優會傳體兒兌關內決凍湊擊劃則剛別剝務動勵單歷壓參雙變疊葉號啟員園圍圖圓場壞塊堅牆聲殼夠頭獎學寶實寬對塵盡層屬島嶺巔幣師帶幫並廢開張彈歸當錄徑總惱驚戲戰掛損換據撐攢數斷無時曬暫機權條來極構標欄樹樣檔橋樺夢檢欖歡畢氣瀏溫灣滿灘燈燦點爛煩獨現蓋盤碼確禮離種稱穩籠簽糧緊紅級紀紛紋線練組織經結給統繼績續縷編纏繽縮網聯膚勝臉騰節範獲鶯螢營蘚補見規覽覺計認記設證試該語說請讀誰謎譜負敗貨資贏車轉軟輕輔輸邊達過運還這進遠連適選鑑銀鋪鏈銷鎖錯長門閉問闖間隊陽陰陣際隨難霧靜頁頂項順預領顆題顏額風飛飼饒饋鮮鳴麥齊後雲幾餘裡發黃沒著萬專買們價傾養寫涼憑刪勢區卻響處夾寧導爾屆庫應異棄強懸戶執擴擾拋護攔擇擠擲敵斂顯術雜淺濟塗湧漲漸燒熱狀環畫積簡類約細繪絕綠綴膠脈腳蕩觀視觸讓講許論評識訴譯誤諾調謂質購貼費賦賴輪較輯遲邏鄰鈕鍵閥階險隱須頻飾駐驗';
+const TW_S = '与东两个丰临为么义乐书乱产亩亲仅从仓优会传体儿兑关内决冻凑击划则刚别剥务动励单历压参双变叠叶号启员园围图圆场坏块坚墙声壳够头奖学宝实宽对尘尽层属岛岭巅币师带帮并废开张弹归当录径总恼惊戏战挂损换据撑攒数断无时晒暂机权条来极构标栏树样档桥桦梦检榄欢毕气浏温湾满滩灯灿点烂烦独现盖盘码确礼离种称稳笼签粮紧红级纪纷纹线练组织经结给统继绩续缕编缠缤缩网联肤胜脸腾节范获莺萤营藓补见规览觉计认记设证试该语说请读谁谜谱负败货资赢车转软轻辅输边达过运还这进远连适选鉴银铺链销锁错长门闭问闯间队阳阴阵际随难雾静页顶项顺预领颗题颜额风飞饲饶馈鲜鸣麦齐后云几余里发黄没着万专买们价倾养写凉凭删势区却响处夹宁导尔届库应异弃强悬户执扩扰抛护拦择挤掷敌敛显术杂浅济涂涌涨渐烧热状环画积简类约细绘绝绿缀胶脉脚荡观视触让讲许论评识诉译误诺调谓质购贴费赋赖轮较辑迟逻邻钮键阀阶险隐须频饰驻验载丢态将储账备';
+const TW_T = '與東兩個豐臨為麼義樂書亂產畝親僅從倉優會傳體兒兌關內決凍湊擊劃則剛別剝務動勵單歷壓參雙變疊葉號啟員園圍圖圓場壞塊堅牆聲殼夠頭獎學寶實寬對塵盡層屬島嶺巔幣師帶幫並廢開張彈歸當錄徑總惱驚戲戰掛損換據撐攢數斷無時曬暫機權條來極構標欄樹樣檔橋樺夢檢欖歡畢氣瀏溫灣滿灘燈燦點爛煩獨現蓋盤碼確禮離種稱穩籠簽糧緊紅級紀紛紋線練組織經結給統繼績續縷編纏繽縮網聯膚勝臉騰節範獲鶯螢營蘚補見規覽覺計認記設證試該語說請讀誰謎譜負敗貨資贏車轉軟輕輔輸邊達過運還這進遠連適選鑑銀鋪鏈銷鎖錯長門閉問闖間隊陽陰陣際隨難霧靜頁頂項順預領顆題顏額風飛飼饒饋鮮鳴麥齊後雲幾餘裡發黃沒著萬專買們價傾養寫涼憑刪勢區卻響處夾寧導爾屆庫應異棄強懸戶執擴擾拋護攔擇擠擲敵斂顯術雜淺濟塗湧漲漸燒熱狀環畫積簡類約細繪絕綠綴膠脈腳蕩觀視觸讓講許論評識訴譯誤諾調謂質購貼費賦賴輪較輯遲邏鄰鈕鍵閥階險隱須頻飾駐驗載丟態將儲帳備';
 const TW_MAP = (function(){ const m={}; for(let i=0;i<TW_S.length;i++) m[TW_S[i]]=TW_T[i]; return m; })();
 
 /* 英文：按最长优先做短语替换。语序与中文不同，
@@ -1543,8 +1569,8 @@ const TW_MAP = (function(){ const m={}; for(let i=0;i<TW_S.length;i++) m[TW_S[i]
 /* 带数字的拼接句必须整句重写：光靠词替换，「累计消除 20 组」只会变成
    「Total clear 20 组」这种夹生英文。规则先于词表执行，整句与专名排在最前，
    否则会被通用词条先啃掉一半（「天空牧场」曾被啃成「天空Ranch」）。 */
-const EN_RULES = [["每一局都是先算出一条合法的通关顺序，再沿着它铺花色和特殊牌 —— 有解是构造出来的，不是碰运气。卡在死局只会是取牌顺序的问题，失败页可以直接看参考解法回放。","Every board is built from a valid clearing order first, then coloured along it. Solvability is constructed, not left to chance. If you get stuck it is the order you picked, and the fail screen can replay the reference solution."],["点击盘面上没被压住的牌，它会飞进下方卡槽；卡槽里凑齐 3 张同花色自动消除。把盘面、卡槽、彩虹槽全部清空就算过关。","Tap any tile that is not covered; it flies into the slots below. Three of the same kind clear automatically. Empty the board, the slots and the rainbow slots to win."],["卡槽塞满且没有任何三连时判负。这是唯一的失败方式（限时与限步关卡另算）。周常变体会把格子改成 5 格或 9 格。","You lose when all slots are full with no possible match. That is the only way to lose, apart from timed and move-limited levels. Weekly variants may change the count to 5 or 9."],["50 关，五个章节。每章第 10 关是 BOSS 关；第二章起每章第 5 关是宝箱关，金币翻倍、必掉图鉴。","50 levels across 5 chapters. Level 10 of each chapter is a boss; from chapter 2 on, level 5 is a treasure level with double coins and a guaranteed codex drop."],["看下面这排格子 —— 这就是卡槽，一共 7 格。凑齐 3 张一样的就会自动消掉。","The row below is the slots - seven of them. Three matching tiles clear automatically."],["这里风大，草却长得格外好 —— 牧羊人说，越难站住的地方，越值得多待一会儿。","The wind is fierce, yet the grass grows best here. The shepherd says the harder a place is to stand, the longer it is worth staying."],[new RegExp("你 (.+?) · 对方 (.+?)　累计 (\\d+) 胜 (\\d+) 负","g"),"You $1 vs $2   $3W $4L"],["点一下最上面那张牌，它就会飞进下面的卡槽。被别的牌压住的会变灰，点不动。","Tap the topmost tile and it flies into the slots below. Tiles pinned under others turn grey and cannot be tapped."],["再往上就是星夜牧场了。据说走到这里的羊，都能在天上找到属于自己的那一颗。","Beyond this lies the Starlit Pasture. They say every sheep that gets this far finds its own star in the sky."],["第一场雪落下来的时候，整片高原都安静了。冻住的草料要靠旁边的温度化开。","When the first snow fell, the whole plateau went quiet. Frozen straw thaws on the warmth of its neighbours."],["字体依 SIL OFL 1.1 授权，图标依 CC BY 4.0 授权","Font under SIL OFL 1.1, icons under CC BY 4.0"],["过不去的时候用下面三个道具：洗牌打乱、撤回退一步、移出退回 3 张。","Stuck? Use the three items below: shuffle, undo one step, or move 3 tiles back out."],["盘面下方的牌堆只能取最前面一张；少数关卡的牌堆是双向的，两端都能取。","From the stacks below the board only the front tile can be taken. In a few levels the stacks are two-way, so either end works."],["越往里走，树越密，光越少。有些草料被藤蔓缠住了，得先解开才能拿。","The deeper you go, the denser the trees and the dimmer the light. Some straw is tangled in vines and must be freed first."],["再往上就出了云层。脚下是翻涌的云海，头顶是从没见过这么近的太阳。","Higher still and you break through the clouds. A rolling sea below, and a sun closer than you have ever seen."],[new RegExp("你已经清了 ([\\d,]+) 组草料，羊群走过 (\\d+) 关","g"),"You have cleared $1 sets of straw across $2 levels"],[new RegExp("堆叠的草料还有 (\\d+) 块没消除，别灰心，用道具再试一次！","g"),"$1 tiles of straw are left. Chin up - use an item and try again!"],["天刚亮，露水还挂在草尖上。羊群三三两两地散在坡上，谁也不着急。","Dawn has just broken and dew still clings to the grass. The flock is scattered across the slope, and nobody is in a hurry."],[new RegExp("时间到了！还剩 (\\d+) 块没消除，Boss 关要抓紧手速。","g"),"Time is up — $1 tiles left. Boss levels reward speed."],["每周一换一套变体规则（窄槽、迷雾、爆破等），同一周内全服相同。","A new variant each Monday (narrow slots, fog, blast and more), the same for everyone that week."],["一波清完接下一波，每波更难，中途可选增益。比的是累计消除组数。","Clear a wave, then the next, each harder than the last, with a buff to pick along the way. Score is total sets cleared."],["卡槽快满时会变黄变红。7 格全被占满又消不掉，这一关就输了。","The slots turn yellow, then red, as they fill. All seven full with no match means you lose."],[new RegExp("任务完成！金币 \\+(\\d+) · 羊毛 \\\\+(\\d+)","g"),"Task complete! +$1 coins, +$2 wool"],["牧羊人没有再说什么，只是把灯点亮，站在原地看着羊群往前走。","The shepherd said nothing more, only lit the lamp and stood watching the flock walk on."],["这些关卡是在开始记录用时之前通的，重玩任意一关就会补上成绩","These levels were cleared before timing was recorded. Replay any of them to fill in a score."],["单文件网页实现，全部资源内嵌，运行期间不请求任何外部资源。","A single-file web build. Everything is embedded; nothing is fetched at runtime."],["不占卡槽格子！单独放在上面的彩虹槽里，凑齐 3 张自动消除","Takes no slot! It goes to the rainbow slots above; three clear automatically"],[new RegExp("卡槽满啦，还剩 (\\d+) 块没消除，用道具原地复活吧！","g"),"Slots are full — $1 tiles left. Use an item to revive here!"],["全服同一套题面，每天换一次。因为同题，成绩才有可比性。","One board for everyone, refreshed daily. Same board means scores are comparable."],["外面裹了一层草垛，要点两下：第一下拆壳，第二下才进卡槽","Wrapped in straw. Tap once to strip it, tap again to send it to the slots"],[new RegExp("本周变体「(.+?)」，全服同一套规则，下周一换新。","g"),"This week’s variant is \"$1\". Same rules for everyone; it changes next Monday."],["林子里的羊学会了一件事：看不清的时候，先别急着动手。","The sheep of the woods learned one thing: when you cannot see clearly, do not rush."],["羊群全部安全回家啦！你真是太棒了，青草在为你鼓掌。","The whole flock made it home. Wonderful - the meadow is applauding."],["漂亮！3 秒内连着消就能攒连击，连击越高金币越多。","Nice! Clear again within 3 seconds to build a combo. Bigger combos pay more coins."],[new RegExp("(\\d+)/(\\d+) 组 · 剩 (\\d+) 步","g"),"$1/$2 · $3 moves"],[new RegExp("一共清了 (\\d+) 组，撑到第 (\\d+) 波。","g"),"Cleared $1 sets, reached wave $2. "],["牧羊人说，这片坡是最好学的地方——摔一跤也不疼。","The shepherd says this slope is the best place to learn: a tumble here never hurts."],["炸弹倒数归零了！进了卡槽的炸弹牌一定要优先凑掉。","A bomb hit zero. Clear bomb tiles first once they reach the slots."],["风把云吹散了，剩下的时间，都用来陪你喜欢的羊吧。","The wind cleared the clouds. Spend what is left with the sheep you love."],["今天的题目全服都一样，把成绩分享给朋友比一比。","Everyone gets the same board today. Share your time and compare."],["每日 / 周常 / 无尽的题面暂不支持暗号分享","Daily, Weekly and Endless boards cannot be shared as codes yet."],["步数用完了！这一关要在限定步数内凑够指定组数。","Out of moves. This level needs the required sets within a move limit."],["被冰封住了，先消掉它同层紧挨着的一张牌就能解冻","Frozen solid. Clear any tile next to it on the same layer to thaw it"],["花色是盖着的，只有进了卡槽才翻开，没法提前规划","Its kind is hidden until it reaches the slots, so you cannot plan around it"],["「第一只跟着你出门的羊，草帽是它自己叼来的。」","\"The first sheep to follow you out. The straw hat was its own idea.\""],["卡槽里没有能凑对的，洗牌救不了，试试「移出」","No match is possible in the slots. Shuffling will not help - try Move Out."],["消掉它会照亮 3 张谜之牌，把盖着的花色翻开","Reveals the kind of 3 mystery tiles"],["牌堆里盖着的补给，全场消够指定组数才会送上来","Hidden in a stack. It is delivered once the board reaches the marked number of sets"],["点击上方堆叠方块，凑齐 3 个相同的即可消除","Tap unblocked tiles; match 3 of a kind to clear"],["第一只跟着你出门的羊，草帽是它自己叼来的。","The first sheep to follow you out. The straw hat was its own idea."],["传说中被阳光亲吻过的羊，很少有人真的见过。","The legendary sheep kissed by sunlight. Few have truly seen one."],[new RegExp("这份补给还要再消 (\\d+) 组才会送上来","g"),"This supply arrives after $1 more sets"],["进了卡槽就开始倒数，数完还没消掉就直接失败","Starts counting down once in the slots. Reach zero before clearing it and you lose"],[new RegExp("签满 (\\d+) 天额外 羊毛 (\\d+)","g"),"+$2 wool on day $1"],[new RegExp("已有，转为碎片 ×1（当前 (\\d+)）","g"),"Already owned - converted to 1 shard (now $1)"],["喜欢在背阴的石头上打盹，毛里总有青苔味。","Naps on shaded stones. Its wool always smells faintly of moss."],["天没亮就出门，只为舔到最新鲜的那滴露水。","Heads out before dawn just to catch the freshest drop of dew."],["站在坡顶能看清三里外的草，眼神好得离谱。","From a hilltop it can pick out grass a mile off. Absurdly sharp eyes."],["极夜里见过天上的光，回来后毛就变了颜色。","Saw the lights during the polar night, and its wool changed colour after."],["通关有几率遇到新羊，点下面的头像即可出战","Clearing levels may drop new sheep; tap a portrait below to field it"],[new RegExp("限 (\\d+) 步内消够 (\\d+) 组","g"),"Clear $2 sets in $1 moves"],["锁着的牌，全场再消够指定组数就会自动解开","Locked. It opens once the board reaches the marked number of sets"],[new RegExp("在 (\\d+) 步内消除 (\\d+) 组","g"),"Clear $2 sets within $1 moves"],["不挑食，据说吃过牧场里所有能吃的东西。","Not a picky eater. Said to have tasted everything edible on the ranch."],["围巾是牧羊人织的，它一年四季都不肯摘。","The shepherd knitted the scarf. It refuses to take it off, all year round."],["连击窗口延长 1.5 秒，更容易连起来","Combo window extended by 1.5s, making chains easier"],["这里的规矩是：慢一点没关系，但别停下。","The rule up here: slow is fine, just do not stop."],["这个局面洗不出有解的排布，道具没有消耗","No solvable arrangement can be shuffled from this board; no item was spent"],["慢一点也没关系，草原上的路从来不催人。","Slow is fine. The meadow path never rushes anyone."],["今天的第一缕阳光，已经替你晒暖了牧场。","The first light of day has already warmed the pasture for you."],[new RegExp("连续签到 (\\d+) 天 · 点击领取","g"),"Streak $1 · Tap to claim"],["羊群全部安全回家啦，青草在为你鼓掌。","The whole flock made it home. The meadow is applauding."],["从很远的海边走来，还记得潮水的声音。","Walked here from a distant shore and still remembers the sound of the tide."],["总能踩到四叶草，连它自己都觉得奇怪。","Always steps on four-leaf clovers. Even it finds this strange."],["接下来每一波都多一个格子，效果会叠加","One extra slot every wave from now on; the effect stacks"],[new RegExp("(\\d+) 秒内消够 (\\d+) 组","g"),"Clear $2 sets in $1s"],["把卡槽里的牌临时挪出去，给三连腾地方","Moves tiles out of the slots to make room for a match"],["通关有几率遇到新羊，重复的会变成碎片","Clearing levels may drop new sheep; duplicates become shards"],["三星通关，羊群对你佩服得五体投地！","Three stars. The flock is thoroughly impressed."],["参考解法演示完毕 —— 它是能过的","Reference solution complete - it does clear"],["秋天最忙，据说能背回半亩地的麦穗。","Busiest in autumn. They say it can carry back half a field of wheat."],["冬天的粮仓管理员，睡觉也抱着草垛。","Winter's granary keeper. It even sleeps hugging a haystack."],["沉默寡言，撞过的石头比走过的路多。","A quiet one. It has bumped into more stones than it has walked paths."],["夏天会偷偷去果园，回来时脸是红的。","Sneaks off to the orchard in summer and comes back red-faced."],[new RegExp("富余碎片不够，还差 (\\d+) 片","g"),"Not enough spare shards - need $1 more"],[new RegExp("第 (\\d+) 关 · 朋友的题面","g"),"Level $1 - a friend's board"],["先消掉旁边紧挨着的一张牌，才能解冻","Clear an adjacent tile first to thaw this one"],["这一局洗过牌，参考解法已经不适用了","This run was shuffled, so the reference solution no longer applies"],["通关一次就会记下你的用时与最高连击","Clearing a level records your time and best combo"],[new RegExp("通关 (\\d+) 个 Boss 关","g"),"Clear $1 boss levels"],["消掉它会额外掉羊毛，牧场建设就靠它","Clears for bonus wool, which pays for the ranch"],["走得远不如走得稳，羊群会一直等你。","Steady beats far. The flock will wait for you."],[new RegExp("今日已签 · 连续 (\\d+) 天","g"),"Checked in · $1-day streak"],[new RegExp("清掉最上面四层的 (\\d+) 张牌","g"),"Clear $1 tiles from the top 4 layers"],[new RegExp("开局自动解冻 (\\d+) 张冰冻牌","g"),"Auto-thaw $1 frozen tiles at start"],[new RegExp("开局自动翻开 (\\d+) 张谜之牌","g"),"Reveal $1 mystery tiles at start"],[new RegExp("连击窗口 \\+([\\d.]+) 秒","g"),"+$1s combo window"],["清空一波，挑一个增益带进下一波。","Clear a wave, then pick a buff to carry into the next one."],["黄昏时最好看，毛尖泛着淡淡的紫。","Loveliest at dusk, when the tips of its wool turn faintly purple."],["毛色像凝固的阳光，靠近会觉得暖。","Its wool looks like sunlight set solid; standing near it feels warm."],["爬过最高的墙，也蹭掉过最多的毛。","Has climbed the highest walls and rubbed off the most wool doing it."],["下一波开始花色少一种，配对更容易","One fewer kind from the next wave on, so matching is easier"],[new RegExp("灯笼照亮了 (\\d+) 张谜之牌","g"),"The lantern revealed $1 mystery tiles"],[new RegExp("还要再消 (\\d+) 组才能解锁","g"),"Clear $1 more sets to unlock"],[new RegExp("继续本局 · 第 (\\d+) 关","g"),"Resume · Level $1"],[new RegExp("继续闯关 · 第 (\\d+) 关","g"),"Continue · Level $1"],["走路很轻，远看像一朵挪动的云。","Walks so lightly that from afar it looks like a drifting cloud."],["路过的地方都会留下一股清凉气。","Leaves a trace of cool air wherever it passes."],["在河滩长大，蹄子上永远沾着泥。","Raised on the riverbank. There is always mud on its hooves."],["认得林子里每一株蕨，从不迷路。","Knows every fern in the wood and never gets lost."],["下一波少 12 张牌，跑得更快","12 fewer tiles next wave, so it runs faster"],[new RegExp("签到成功！金币 \\+(\\d+)","g"),"Checked in! +$1 coins"],["暗号看不懂，检查一下有没有打错","That code could not be read - check it for typos"],["重开新盘面，刚才那封战书已作废","New board started; the previous duel is void"],["牌面、道具、关卡目标与四种模式","Tiles, items, level goals and four modes"],[new RegExp("(\\d+) / (\\d+) 关","g"),"$1 / $2 levels"],[new RegExp("Total  (\\d+) 颗星","g"),"$1 stars total"],["消掉它会额外掉金币，看到就先拿","Clears for bonus coins. Grab it when you see it"],["满级羊多出来的碎片可以换缺的羊","Spare shards from maxed sheep can be traded for missing ones"],["再有 12 次重复掉落必出新羊","12 more duplicates guarantees a new sheep"],["本软件仅嵌入使用，未修改其字形","Embedded as-is; glyphs unmodified"],["有解洗牌 · 洗成最宽松局面","Solvable shuffle, loosest board possible"],[new RegExp("通关第 (\\d+) 关后解锁","g"),"Unlocks after clearing level $1"],["还没遇到这只羊，多通几关试试","You have not met this sheep yet - clear a few more levels"],["进度已清空，重新开始牧羊生活","Progress cleared. A new shepherding life begins"],["点击道具即可原地复活继续闯关","Tap an item to revive and keep going"],[new RegExp("图鉴掉落率 \\+(\\d+)%","g"),"+$1% codex drop"],[new RegExp("完成 (\\d+) 次每日挑战","g"),"Finish $1 Daily Challenges"],[new RegExp("收集到 (\\d+) 只传说羊","g"),"Collect $1 legendary sheep"],[new RegExp("牧场建设累计 (\\d+) 级","g"),"Reach ranch level $1 total"],["把盘面、卡槽、彩虹槽全部清空","Empty the board, slots and rainbow slots"],["把烦恼交给风，把青草留给羊。","Give your worries to the wind, and the grass to the sheep."],[new RegExp("（含连击 \\+(\\d+)）","g")," (incl. +$1 combo)"],["落雪那天出生，从此不怕冷。","Born on the day the snow fell, and never cold since."],["走到哪儿，哪儿的冰就化了。","Wherever it goes, the ice there melts."],["夜里会抬头很久，像在等谁。","Looks up for a long while at night, as if waiting for someone."],[new RegExp("还差 (\\d+) 就能领了","g"),"$1 more to claim"],[new RegExp("羊毛不够，还差 (\\d+)","g"),"Not enough wool - need $1 more"],["已重新洗牌 · 保证仍有解","Reshuffled - still solvable"],[new RegExp("历史最佳 (\\d+) 组。","g"),"Best ever $1 sets. "],["不服？把这局的暗号甩给朋友","Not done? Send this board to a friend"],[new RegExp("商店道具便宜 (\\d+)%","g"),"$1% off shop items"],[new RegExp("无尽模式消 (\\d+) 组","g"),"Clear $1 sets in Endless"],[new RegExp("收集全部 (\\d+) 只羊","g"),"Collect all $1 sheep"],["把被压在最底下的小羊挖出来","Dig out the sheep buried at the bottom"],["洗出来的一定还是有解的局面","The result is always still solvable"],[new RegExp("单局达成 (\\d+) 连击","g"),"Hit a $1-combo"],[new RegExp("消掉 (\\d+) 张特殊牌","g"),"Clear $1 special tiles"],[new RegExp("金币产出 \\+(\\d+)%","g"),"+$1% coins"],[new RegExp("羊毛产出 \\+(\\d+)%","g"),"+$1% wool"],["立刻获得 2 个随机道具","Get 2 random items right away"],["再解锁一些成就就能换称号","Unlock more achievements to change your title"],["再点一次确认清空全部进度","Tap again to confirm wiping all progress"],["金币不足，先去通关攒点吧","Not enough coins - clear a few levels first"],[new RegExp("最快的一关 · (.+)","g"),"Fastest level · $1"],[new RegExp("累计通关 (\\d+) 关","g"),"Clear $1 levels total"],[new RegExp("解锁到第 (\\d+) 关","g"),"Unlock level $1"],[new RegExp("单局连击达到 (\\d+)","g"),"Reach a $1-combo in one run"],[new RegExp("累计消除 (\\d+) 组","g"),"Clear $1 sets total"],["在限定步数内消够指定组数","Clear the required sets within a move limit"],["消掉指定组数的某一种花色","Clear the required sets of one kind"],["清掉最上面四层的指定张数","Clear the required tiles from the top four layers"],["在限定秒数内消够指定组数","Clear the required sets within a time limit"],["牌面加字母角标，加粗描边","Adds letter tags and bolder outlines to tiles"],["有解洗牌 · 局面更宽松","Solvable shuffle, looser board"],[new RegExp("(\\d+)月(\\d+)日","g"),"$1/$2"],[new RegExp("还有 (\\d+) 项没领","g"),"$1 unclaimed"],["不用任何道具通关 1 次","Clear a level using no items"],[new RegExp("第 (\\d+) 波来了","g"),"Wave $1 incoming"],[new RegExp("神速需 (.+?) 内","g"),"Under $1 for Fast"],["卡槽多两格，但花色翻倍","Two extra slots, but twice the kinds"],[new RegExp("已撤回 (\\d+) 步","g"),"Undid $1 step(s)"],[new RegExp("已移出 (\\d+) 块","g"),"Moved $1 tiles out"],[new RegExp("升到 Lv.(\\d+)","g"),"reached Lv.$1"],[new RegExp("战书已接下 · 目标 ","g"),"Duel accepted - target "],["』用完了，去商店补货吧","\" is used up - restock at the shop"],["把这局的暗号分享给朋友","Share this board with a friend"],["进度已保存到本机浏览器","Progress saved to this browser"],["这一局没有可分享的暗号","This run has no code to share"],["道具不足，去商店看看吧","Out of items - check the shop"],[new RegExp("　金币 \\+(\\d+)","g"),"  +$1 coins"],[new RegExp("金币 \\+(\\d+)%","g"),"+$1% coins"],[new RegExp("羊毛 \\+(\\d+)%","g"),"+$1% wool"],[new RegExp("道具便宜 (\\d+)%","g"),"$1% off items"],[new RegExp("累计 (\\d+) 颗星","g"),"Collect $1 stars"],[new RegExp("收集 (\\d+) 只羊","g"),"Collect $1 sheep"],["把最近入槽的牌退回原位","Puts the most recent tile back"],["消掉它会随机送一个道具","Clears for a random item"],["每日特惠 · 青草集市","Daily Deal · Grass Market"],["过不去的关，道具来帮忙","Stuck? Items can help"],[new RegExp("消掉 (\\d+) 组 ","g"),"Clear $1 sets of "],["已重新洗牌，保证仍有解","Reshuffled - still solvable"],[new RegExp("金币 ([\\d,]+)","g"),"$1 coins"],[new RegExp("羊毛 ([\\d,]+)","g"),"$1 wool"],["不用道具通关 10 次","Clear 10 levels using no items"],["羊群已经在坡上等你了","The flock is waiting for you on the slope"],[new RegExp("任务完成！金币 \\+","g"),"Task complete! +"],[new RegExp("签到成功！金币 \\+","g"),"Checked in! +"],[new RegExp("富余碎片不够，还差 ","g"),"Not enough spare shards - need "],[new RegExp("兑换成功，牌面换成「","g"),"Redeemed. Tile skin set to \""],["青草正在生长中...","The grass is growing..."],["点下面的头像即可激活","Tap a portrait below to unlock"],["这个稀有度已经集齐了","This rarity is already complete"],["复活成功，继续加油！","Revived - keep going!"],[new RegExp("(\\d+) 关有记录","g"),"$1 levels with records"],["把被压住的小羊挖出来","Dig out the buried sheep"],["看看这局其实该怎么过","See how this board could be solved"],[new RegExp("累计 (\\d+) 关","g"),"$1 levels total"],[new RegExp("最佳 (\\d+) 组","g"),"Best $1 sets"],[new RegExp("通关 (\\d+) 关","g"),"Clear $1 levels"],[new RegExp("开局 (\\d+) 次","g"),"Start $1 runs"],[new RegExp("限时 (\\d+) 秒","g"),"$1s limit"],["有 15 关拿到三星","Get 3 stars on 15 levels"],["炸弹倒数也会跟着重置","The bomb countdown resets too"],["通关必定掉落一只羊","Guarantees a sheep drop on clear"],[new RegExp("等 (\\d+) 项","g"),"and $1 more"],[" ×1 已放入背包"," x1 added to your bag"],[new RegExp("这份补给还要再消 ","g"),"This supply needs "],["还没有可撤回的操作","Nothing to undo yet"],["暗号不对，再看看？","Wrong code - take another look?"],["例如 3F9K2Q","e.g. 3F9K2Q"],["合成音，可随时关闭","Synthesized; can be turned off anytime"],["只在被消掉时给东西","Rewards on clear only"],[new RegExp("(\\d+) 日签到","g"),"$1-Day Check-in"],[new RegExp("第 (\\d+) 关","g"),"Level $1"],["有 1 关拿到三星","Get 3 stars on a level"],["有 5 关拿到三星","Get 3 stars on 5 levels"],["洗不出就不消耗道具","If none is found, no item is spent"],["连续撤回 3 步","Undo 3 steps in a row"],[new RegExp("羊毛不够，还差 ","g"),"Not enough wool - need "],["羊羊羊之草原牧歌","Sheep Meadow"],["神速 / 高连击","Fast / Big combo"],["今天已经签到过啦","Already checked in today"],["已恢复上次的进度","Restored your last run"],["卡槽只有 5 格","Only 5 slots"],["一半的牌盖着花色","Half the tiles are hidden"],["槽位移出 3 块","Move 3 tiles out"],["一次升级永久生效","One upgrade, permanent"],["连续撤回 2 步","Undo 2 steps in a row"],["卡槽只有 7 格","Only 7 slots"],["完成一次每日挑战","Finish a Daily Challenge"],[new RegExp("碎片 (\\d+)","g"),"$1 shards"],["赢了这场对决！","You won this duel!"],["冰冻牌大量出现","Frozen tiles everywhere"],["炸弹牌大量出现","Bomb tiles everywhere"],["还没有出战的羊","No sheep fielded yet"],["通 关 成 功","CLEARED"],["还没有激活的羊","No sheep unlocked yet"],["这项已经领过了","Already claimed"],["这一关还没解锁","This level is locked"],["已复制到剪贴板","Copied to clipboard"],["差 一 点 点","SO CLOSE"],[new RegExp("(\\d+) 片","g"),"$1 shards"],["初见 Boss","First Boss"],["Boss 克星","Boss Slayer"],["还没有任何纪录","No records yet"],["达成即自动发放","Granted automatically on completion"],["会改变取牌顺序","Changes the draw order"],["夜深了，牧羊人","Late night, Shepherd"],["早上好，牧羊人","Good morning, Shepherd"],["中午好，牧羊人","Good noon, Shepherd"],["下午好，牧羊人","Good afternoon, Shepherd"],["傍晚好，牧羊人","Good evening, Shepherd"],["本周新纪录！","New record this week!"],["今日新纪录！","New record today!"],["撤回 1 步","Undo 1 step"],["移出 5 张","Move out 5 tiles"],["移出 4 张","Move out 4 tiles"],["称号已换成「","Title changed to \""],[new RegExp("灯笼照亮了 ","g"),"The lantern revealed "],[new RegExp("碎片换来了 ","g"),"Shards traded for "],["昵称不能为空","The name cannot be empty"],["没有可洗的牌","Nothing left to shuffle"],["已经是满级了","Already at max level"],["参考解法回放","Solution Replay"],["羊群还在路上","The flock is still on its way"],["刷新了纪录！","New record! "],["历史最高连击","Best combo ever"],["建设等级合计","Build level total"],["可在商店升级","Upgradable in the shop"],["重新打乱堆叠","Reshuffle the stack"],["移出 3 张","Move out 3 tiles"],["晚安，牧羊人","Good night, Shepherd"],["节奏起来了!","In the zone!"],["羊群沸腾了!","The flock roars!"],["牧场全部建满","Max out the ranch"],["新羊入队！","New sheep joined! "],["这次差一点","So close this time"],[new RegExp("本关最佳 ","g"),"Best here "],["再挑战一次","Try again"],["花色多一种","One extra kind"],["连击不断!","Unstoppable!"],["手速惊人!","Lightning hands!"],["牧场之光!","Pride of the meadow!"],["完美主义者","Perfectionist"],["图鉴收藏家","Codex Collector"],["多一格卡槽","One extra slot"],["少一种花色","One fewer kind"],["连击更宽松","Looser combos"],["已经建满了","is already fully built"],["已经满级了","is already at max level"],[new RegExp("本周规则：","g"),"This week: "],[new RegExp("成就达成：","g"),"Achievement: "],[new RegExp("还要再消 ","g"),"Clear "],["已重置本关","Level reset"],["名字已更新","Name updated"],["卡槽是空的","The slots are empty"],["道具用尽了","Out of items"],["清空所有牌","Clear every tile"],["个人纪录墙","Personal Records"],["与四种模式","and four modes"],["出了新手村","Past the Basics"],["消了一百组","One Hundred Sets"],["消了五百组","Five Hundred Sets"],["小小收藏家","Little Collector"],["草原羊群榜","Meadow Leaderboard"],["图鉴掉落率","Codex drop rate"],["撤销上一步","Undo one step"],["手感不错!","On fire!"],["牧场之神!","Meadow legend!"],[new RegExp(" 用时 ","g")," time "],[new RegExp(" 连击 ","g")," combo "],["刷新最佳","New best"],["周常挑战","Weekly Challenge"],["每日挑战","Daily Challenge"],["新纪录！","New record!"],["再玩一次","Play again"],["返回草原","Back to Meadow"],["高连击 ","Big combo "],["最高连击","Best combo"],["消除组数","Sets cleared"],["有解洗牌","Solvable shuffle"],["熟练牧人","Skilled Herder"],["风雨无阻","Come Rain or Shine"],["传说饲主","Legendary Keeper"],["盘面缩小","Smaller board"],["补给两件","Two supplies"],["背景音乐","Music"],["色觉辅助","Colorblind aid"],["震动反馈","Haptics"],[" 已开启"," on"],[" 已关闭"," off"],[new RegExp("已换成「","g"),"Switched to \""],[new RegExp("通关第 ","g"),"Cleared level "],[new RegExp("已撤回 ","g"),"Undid "],[new RegExp("已移出 ","g"),"Moved out "],["草原副本","Meadow Run"],["未用道具","No items"],["关卡地图","Level Map"],["晨露草原","Dewfall Meadow"],["幽深森林","Deepwood"],["初雪高原","First Snow Plateau"],["星夜牧场","Starlit Pasture"],["碎片不够","Not enough shards"],["羊毛不够","Not enough wool"],["重开本关","Restart level"],["战书目标","Duel Goal"],["点击使用","Use"],["初次放羊","First Flock"],["小有所成","Getting Somewhere"],["熟能生巧","Practised Hand"],["牧场老手","Ranch Veteran"],["草原传说","Meadow Legend"],["越走越远","Ever Onward"],["翻过雪线","Over the Snowline"],["走到星夜","Into the Starlit Night"],["三十而立","Thirty Strong"],["星光满地","Sea of Stars"],["星河灿烂","Brilliant Galaxy"],["一尘不染","Spotless"],["五星连珠","Five in a Row"],["完美主义","Perfectionist"],["连击好手","Combo Adept"],["连击大师","Combo Master"],["消除机器","Clearing Machine"],["徒手过关","Bare Handed"],["老手风范","Veteran Style"],["今日打卡","Checked In"],["坚持一周","A Full Week"],["无尽入门","Endless Rookie"],["无尽好手","Endless Adept"],["半个图鉴","Half the Codex"],["图鉴全满","Codex Complete"],["传说降临","A Legend Arrives"],["初具规模","Taking Shape"],["最快一关","Fastest level"],["草原一角","A Corner of the Meadow"],["图标字体","Icon font"],["闯关模式","Adventure"],["清空全部","Clear everything"],["风车草地","Windmill Field"],["天空牧场","Sky Pasture"],["云海之巅","Cloud Peak"],["天际牧场","Skyline Pasture"],["宝箱营地","Treasure Camp"],["换个手感","Change the feel"],["怎么算赢","How you win"],["底部牌堆","Bottom stacks"],["必定有解","Always solvable"],["金币产出","Coin output"],["羊毛产出","Wool output"],["富余碎片","Spare Shards"],["碎片兑换","Shard trade"],["下一关","Next level"],["神速 ","Fast "],["最佳 ","Best "],["云朵羊","Cloud Sheep"],["露珠羊","Dewdrop Sheep"],["干草羊","Haystack Sheep"],["蕨叶羊","Fern Sheep"],["碎石羊","Pebble Sheep"],["蜜桃羊","Peach Sheep"],["紫丁羊","Lilac Sheep"],["橄榄羊","Olive Sheep"],["珊瑚羊","Coral Sheep"],["围巾羊","Scarf Sheep"],["初雪羊","First Snow Sheep"],["琥珀羊","Amber Sheep"],["常春羊","Ivy Sheep"],["暖阳羊","Sunwarm Sheep"],["千里羊","Farsight Sheep"],["四叶羊","Clover Sheep"],["星月羊","Starmoon Sheep"],["极光羊","Aurora Sheep"],["鎏金羊","Gilded Sheep"],["』牌面","\" tiles"],["」牌面","\" tiles"],["羊羊羊","SHEEP"],[new RegExp("还差 ","g"),"Need "],["知道了","Got it"],["未记录","No record"],["攒星星","Star Collector"],["小连击","Small Combo"],["牧场主","Ranch Owner"],["有记录","With records"],["三星关","3-star levels"],["字体依","Font under"],["图标依","Icons under"],["已遇到","Seen"],["可升级","Upgradable"],["晨露坡","Dewy Slope"],["微光林","Glimmer Wood"],["薄荷溪","Mint Creek"],["云杉谷","Spruce Vale"],["阳光丘","Sunny Knoll"],["苔藓洞","Moss Hollow"],["松果径","Pinecone Path"],["野花甸","Wildflower Flat"],["远山径","Far Hill Trail"],["星月原","Starmoon Plain"],["低语林","Whisper Wood"],["菌菇径","Mushroom Path"],["鹿鸣谷","Deer Call Vale"],["藤蔓崖","Vine Cliff"],["萤火沼","Firefly Marsh"],["古木道","Old Timber Road"],["静水潭","Still Pool"],["暮色岭","Dusk Ridge"],["初雪坡","First Snow Slope"],["冰棱谷","Icicle Vale"],["白桦道","Birch Road"],["霜风口","Frost Gap"],["雪兔径","Snow Hare Path"],["冻湖畔","Frozen Lakeside"],["银松林","Silver Pines"],["寒星台","Cold Star Terrace"],["雪线崖","Snowline Cliff"],["极光原","Aurora Plain"],["入云口","Cloudgate"],["金光坡","Golden Slope"],["浮岛渡","Floating Isle"],["霞光谷","Glow Vale"],["风起崖","Windrise Cliff"],["云中湖","Cloud Lake"],["日照原","Sunlit Plain"],["断云桥","Broken Cloud Bridge"],["天梯道","Sky Ladder"],["夜幕坡","Nightfall Slope"],["银河渡","Galaxy Crossing"],["月牙湾","Crescent Bay"],["流星径","Meteor Path"],["梦境园","Dream Garden"],["星尘谷","Stardust Vale"],["夜莺林","Nightingale Wood"],["幻光崖","Mirage Cliff"],["无垠原","Boundless Plain"],["使用中","In use"],["窄槽周","Narrow Week"],["宽槽周","Wide Week"],["迷雾周","Fog Week"],["缤纷周","Colorful Week"],["霜冻周","Frost Week"],["爆破周","Blast Week"],["今日 ","Today "],["漂亮!","Nice!"],["羊毛牌","Wool Tile"],["金币牌","Coin Tile"],["用时","Time"],["洗牌","Shuffle"],["撤回","Undo"],["移出","Move Out"],["音效","Sound"],["出发","Set off"],["跳过","Skip"],["已领","Claimed"],["领取","Claim"],["便宜","cheaper"],["合计","total"],["模式","Modes"],["富余","Spare "],["方阵","Square"],["菱形","Diamond"],["圆丘","Mound"],["松树","Pine"],["双峰","Twin Peaks"],["心形","Heart"],["高塔","Tower"],["清草","Fresh Grass"],["木纹","Woodgrain"],["云朵","Cloud"],["夜幕","Nightfall"],["默认","Default"],[" 期",""],[" 级",""],["周日","Sun"],["周一","Mon"],["周二","Tue"],["周三","Wed"],["周四","Thu"],["周五","Fri"],["周六","Sat"],["授权",""],["羊毛","Wool"],["金币","Coins"],["碎片","Shards"],["，",", "],["、",", "],["。",". "],["：",": "],["；","; "],["（"," ("],["）",") "]];
-const EN_DICT = {"羊羊羊之草原牧歌": "Sheep Meadow","草原牧歌": "Meadow Song","首页": "Home","关卡": "Levels","排行": "Ranks","商店": "Shop","我的": "Me","关卡地图": "Level Map","草原商店": "Meadow Shop","我的草原": "My Meadow","羊图鉴": "Sheep Codex","我的牧场": "My Ranch","成就徽章": "Achievements","玩法说明": "How to Play","本地存档": "Local Save","关于本作": "About","清空进度": "Reset Progress","成就": "Achievements","称号": "Title","音效": "Sound","震动反馈": "Vibration","背景音乐": "Music","色觉辅助": "Colorblind Aid","语言": "Language","合成音，可随时关闭": "Synthesized, can be turned off","牌面加字母角标，加粗描边": "Adds letter tags and bolder outlines","进度自动保存在本机": "Progress saved on this device","连点两次确认": "Tap twice to confirm","每日挑战": "Daily Challenge","本周挑战": "Weekly Challenge","周常挑战": "Weekly Challenge","无尽草原": "Endless Meadow","输入暗号": "Enter Code","暗号": "Code","全服同题": "Same board for all","玩朋友的题面": "Play a friend’s board","闯关": "Adventure","继续闯关": "Continue","继续本局": "Resume","开始游戏": "Start","卡槽": "slots","彩虹槽": "Rainbow Slots","洗牌": "Shuffle","撤回": "Undo","移出": "Move Out","点击上方堆叠方块，凑齐 3 个相同的即可消除": "Tap unblocked tiles; match 3 of a kind to clear","清掉最上面四层的": "Clear from the top four layers:","张牌": " tiles","消除": "clear","组": " sets","连击": "Combo","用时": "Time","通关": "Cleared","失败": "Failed","下一关": "Next","再试一次": "Retry","返回草原": "Back to Meadow","复活": "Revive","参考解法": "Show Solution","重开": "Restart","暂停": "Pause","冰冻牌": "Frozen Tile","锁链牌": "Chained Tile","双层牌": "Double Tile","彩虹牌": "Rainbow Tile","炸弹牌": "Bomb Tile","谜之牌": "Mystery Tile","补给牌": "Supply Tile","金币牌": "Coin Tile","羊毛牌": "Wool Tile","礼盒牌": "Gift Tile","灯笼牌": "Lantern Tile","规则牌": "Rule Tiles","奖励牌": "Bonus Tiles","基本规则": "Basic Rules","金币": "Coins","羊毛": "Wool","碎片": "Shards","富余碎片": "Spare Shards","普通": "Common","稀有": "Rare","传说": "Legendary","未收集": "Not collected","已收集": "Collected","出战": "Active","金币产出": "Coin output","羊毛产出": "Wool output","道具": "Items","实用道具": "Items","道具升级": "Item Upgrades","牌面皮肤": "Tile Skins","青草地": "Grassland","风车": "Windmill","围栏": "Fence","羊圈": "Pen","建设等级": "Build level","关卡进度": "Level progress","日签到": "-Day Check-in","今日任务": "Daily Tasks","还有": "Still ","项没领": " unclaimed","点击领取": "Tap to claim","连续签到": "Streak","每日": "Daily","纪录墙": "Records","挑战": "Challenge","无尽": "Endless","对战": "Duel","最佳": "Best","历史最佳": "Best ever","胜": "W","负": "L","晨露草原": "Dawn Meadow","幽深森林": "Deep Forest","初雪高原": "First Snow","云海之巅": "Cloud Peak","星夜牧场": "Starlit Pasture","本章已通关": "Chapter cleared:","累计": "Total ","已重新洗牌，保证仍有解": "Reshuffled — still solvable","牧羊人": "Shepherd","傍晚好": "Good evening","早上好": "Good morning","中午好": "Good afternoon","晚上好": "Good evening","牧羊新手": "Novice Shepherd","青草认证牧羊人": "Certified Shepherd","宝箱关": "Treasure","宝箱营地": "Treasure Camp","进行中": "In progress","满级羊多出来的碎片可以换缺的羊": "Spare shards from maxed sheep can be traded","通关有几率遇到新羊，重复的会变成碎片": "Clearing levels may drop new sheep; duplicates become shards","已解锁": "Unlocked","枚": "","牌面": "Tiles","目标": "Goals","与四种模式": " and four modes","关卡目标": "Level Goals","四种模式": "four modes","道具、": "Items, ","牌面、": "Tiles, ","草帽羊": "Straw Hat","苔藓羊": "Moss","云朵羊": "Cloud","麦穗羊": "Wheat","薄荷羊": "Mint","陶土羊": "Clay","进度": "Progress","等级": "Level","资产": "Assets","重新洗牌": "Reshuffled","保证仍有解": "still solvable","开始": "Start","确认": "Confirm","取消": "Cancel","关闭": "Close","返回": "Back","恭喜": "Well done","太可惜": "So close","新纪录": "New record","消除组数": "Sets cleared","最高连击": "Best combo","评价": "Rating","收益": "Reward","剩余": "Left","不足": "Not enough","已满级": "Maxed","升级": "Upgrade","购买": "Buy","兑换": "Trade","领取": "Claim","已领取": "Claimed","解锁": "Unlock","锁定": "Locked","未解锁": "Locked","首领关": "Boss","限时": "Timed","限步": "Limited moves","指定花色": "Target suit","剥层": "Peel layers","救援": "Rescue","清空": "Clear all","暂无记录": "No records yet","最近": "Recent","战绩": "Record","胜率": "Win rate","当前": "Current ","签到": "Check-in","任务": "Tasks","奖励": "Reward","羊毛 +": "Wool +","金币 +": "Coins +","产出": " output","提升": "boost","概率": "chance","设置": "Settings","关于": "About","版本": "Version","牧场": "Ranch","建设": "Build","徽章": "Badges"};
+const EN_RULES = [["网页、安卓应用与微信小游戏共用同一套算法实现，玩法与数值完全一致。","The web, Android and WeChat mini game builds share one algorithm implementation, so play and numbers are identical."],["保存在浏览器或应用的本地存储里，没有账号也没有云端备份；卸载或清除数据会一并丢失。","Kept in the local storage of the browser or app. There is no account and no cloud backup; uninstalling or clearing the data loses it."],["运行期间不请求任何外部资源，不上传任何数据，安卓版未申请任何系统权限。","Requests no external resources while running, uploads nothing, and the Android build declares no system permissions."],["字体依 SIL OFL 1.1、图标依 CC BY 4.0 授权，本软件仅嵌入使用，未修改其字形。","Fonts under SIL OFL 1.1, icons under CC BY 4.0. Embedded as-is; no glyphs were modified."],["将删除本机保存的全部进度：关卡、金币羊毛、羊图鉴、成就与设置，并回到第 1 关重新开始。","This deletes every bit of progress saved on this device - levels, coins and wool, the sheep codex, achievements and settings - and starts over from level 1."],["此操作无法撤销。","This cannot be undone."],["进度只存在本机，没有云端备份可以找回","Progress lives on this device only - there is no cloud backup to restore from"],["进度只存在本机，卸载或清数据会丢失","Saved on this device only - uninstalling or clearing data loses it"],["每一局都是先算出一条合法的通关顺序，再沿着它铺花色和特殊牌 —— 有解是构造出来的，不是碰运气。卡在死局只会是取牌顺序的问题，失败页可以直接看参考解法回放。","Every board is built from a valid clearing order first, then coloured along it. Solvability is constructed, not left to chance. If you get stuck it is the order you picked, and the fail screen can replay the reference solution."],["点击盘面上没被压住的牌，它会飞进下方卡槽；卡槽里凑齐 3 张同花色自动消除。把盘面、卡槽、彩虹槽全部清空就算过关。","Tap any tile that is not covered; it flies into the slots below. Three of the same kind clear automatically. Empty the board, the slots and the rainbow slots to win."],["卡槽塞满且没有任何三连时判负。这是唯一的失败方式（限时与限步关卡另算）。周常变体会把格子改成 5 格或 9 格。","You lose when all slots are full with no possible match. That is the only way to lose, apart from timed and move-limited levels. Weekly variants may change the count to 5 or 9."],["50 关，五个章节。每章第 10 关是 BOSS 关；第二章起每章第 5 关是宝箱关，图鉴掉落判定三次、必出。","50 levels across 5 chapters. Level 10 of each chapter is a boss; from chapter 2 on, level 5 is a treasure level that rolls the codex drop three times."],["看下面这排格子 —— 这就是卡槽，一共 7 格。凑齐 3 张一样的就会自动消掉。","The row below is the slots - seven of them. Three matching tiles clear automatically."],["这里风大，草却长得格外好 —— 牧羊人说，越难站住的地方，越值得多待一会儿。","The wind is fierce, yet the grass grows best here. The shepherd says the harder a place is to stand, the longer it is worth staying."],[new RegExp("你 (.+?) · 对方 (.+?)　累计 (\\d+) 胜 (\\d+) 负","g"),"You $1 vs $2   $3W $4L"],["点一下最上面那张牌，它就会飞进下面的卡槽。被别的牌压住的会变灰，点不动。","Tap the topmost tile and it flies into the slots below. Tiles pinned under others turn grey and cannot be tapped."],["再往上就是星夜牧场了。据说走到这里的羊，都能在天上找到属于自己的那一颗。","Beyond this lies the Starlit Pasture. They say every sheep that gets this far finds its own star in the sky."],["第一场雪落下来的时候，整片高原都安静了。冻住的草料要靠旁边的温度化开。","When the first snow fell, the whole plateau went quiet. Frozen straw thaws on the warmth of its neighbours."],["字体依 SIL OFL 1.1 授权，图标依 CC BY 4.0 授权","Font under SIL OFL 1.1, icons under CC BY 4.0"],["过不去的时候用下面三个道具：洗牌打乱、撤回退一步、移出退回 3 张。","Stuck? Use the three items below: shuffle, undo one step, or move 3 tiles back out."],["盘面下方的牌堆只能取最前面一张；少数关卡的牌堆是双向的，两端都能取。","From the stacks below the board only the front tile can be taken. In a few levels the stacks are two-way, so either end works."],["越往里走，树越密，光越少。有些草料被藤蔓缠住了，得先解开才能拿。","The deeper you go, the denser the trees and the dimmer the light. Some straw is tangled in vines and must be freed first."],["再往上就出了云层。脚下是翻涌的云海，头顶是从没见过这么近的太阳。","Higher still and you break through the clouds. A rolling sea below, and a sun closer than you have ever seen."],[new RegExp("你已经清了 ([\\d,]+) 组草料，羊群走过 (\\d+) 关","g"),"You have cleared $1 sets of straw across $2 levels"],[new RegExp("堆叠的草料还有 (\\d+) 块没消除，别灰心，用道具再试一次！","g"),"$1 tiles of straw are left. Chin up - use an item and try again!"],["天刚亮，露水还挂在草尖上。羊群三三两两地散在坡上，谁也不着急。","Dawn has just broken and dew still clings to the grass. The flock is scattered across the slope, and nobody is in a hurry."],[new RegExp("时间到了！还剩 (\\d+) 块没消除，Boss 关要抓紧手速。","g"),"Time is up — $1 tiles left. Boss levels reward speed."],["每周一换一套变体规则（窄槽、迷雾、爆破等），同一周内全服相同。","A new variant each Monday (narrow slots, fog, blast and more), the same for everyone that week."],["一波清完接下一波，每波更难，中途可选增益。比的是累计消除组数。","Clear a wave, then the next, each harder than the last, with a buff to pick along the way. Score is total sets cleared."],["卡槽快满时会变黄变红。7 格全被占满又消不掉，这一关就输了。","The slots turn yellow, then red, as they fill. All seven full with no match means you lose."],[new RegExp("任务完成！金币 \\+(\\d+) · 羊毛 \\\\+(\\d+)","g"),"Task complete! +$1 coins, +$2 wool"],["牧羊人没有再说什么，只是把灯点亮，站在原地看着羊群往前走。","The shepherd said nothing more, only lit the lamp and stood watching the flock walk on."],["这些关卡是在开始记录用时之前通的，重玩任意一关就会补上成绩","These levels were cleared before timing was recorded. Replay any of them to fill in a score."],["单文件网页实现，全部资源内嵌，运行期间不请求任何外部资源。","A single-file web build. Everything is embedded; nothing is fetched at runtime."],["不占卡槽格子！单独放在上面的彩虹槽里，凑齐 3 张自动消除","Takes no slot! It goes to the rainbow slots above; three clear automatically"],[new RegExp("卡槽满啦，还剩 (\\d+) 块没消除，用道具原地复活吧！","g"),"Slots are full — $1 tiles left. Use an item to revive here!"],["全服同一套题面，每天换一次。因为同题，成绩才有可比性。","One board for everyone, refreshed daily. Same board means scores are comparable."],["外面裹了一层草垛，要点两下：第一下拆壳，第二下才进卡槽","Wrapped in straw. Tap once to strip it, tap again to send it to the slots"],[new RegExp("本周变体「(.+?)」，全服同一套规则，下周一换新。","g"),"This week’s variant is \"$1\". Same rules for everyone; it changes next Monday."],["林子里的羊学会了一件事：看不清的时候，先别急着动手。","The sheep of the woods learned one thing: when you cannot see clearly, do not rush."],["羊群全部安全回家啦！你真是太棒了，青草在为你鼓掌。","The whole flock made it home. Wonderful - the meadow is applauding."],["漂亮！3 秒内连着消就能攒连击，连击越高金币越多。","Nice! Clear again within 3 seconds to build a combo. Bigger combos pay more coins."],[new RegExp("(\\d+)/(\\d+) 组 · 剩 (\\d+) 步","g"),"$1/$2 · $3 moves"],[new RegExp("一共清了 (\\d+) 组，撑到第 (\\d+) 波。","g"),"Cleared $1 sets, reached wave $2. "],["牧羊人说，这片坡是最好学的地方——摔一跤也不疼。","The shepherd says this slope is the best place to learn: a tumble here never hurts."],["炸弹倒数归零了！进了卡槽的炸弹牌一定要优先凑掉。","A bomb hit zero. Clear bomb tiles first once they reach the slots."],["风把云吹散了，剩下的时间，都用来陪你喜欢的羊吧。","The wind cleared the clouds. Spend what is left with the sheep you love."],["今天的题目全服都一样，把成绩分享给朋友比一比。","Everyone gets the same board today. Share your time and compare."],["每日 / 周常 / 无尽的题面暂不支持暗号分享","Daily, Weekly and Endless boards cannot be shared as codes yet."],["步数用完了！这一关要在限定步数内凑够指定组数。","Out of moves. This level needs the required sets within a move limit."],["被冰封住了，先消掉它同层紧挨着的一张牌就能解冻","Frozen solid. Clear any tile next to it on the same layer to thaw it"],["花色是盖着的，只有进了卡槽才翻开，没法提前规划","Its kind is hidden until it reaches the slots, so you cannot plan around it"],["「第一只跟着你出门的羊，草帽是它自己叼来的。」","\"The first sheep to follow you out. The straw hat was its own idea.\""],["卡槽里没有能凑对的，洗牌救不了，试试「移出」","No match is possible in the slots. Shuffling will not help - try Move Out."],["消掉它会照亮 3 张谜之牌，把盖着的花色翻开","Reveals the kind of 3 mystery tiles"],["牌堆里盖着的补给，全场消够指定组数才会送上来","Hidden in a stack. It is delivered once the board reaches the marked number of sets"],["点击上方堆叠方块，凑齐 3 个相同的即可消除","Tap unblocked tiles; match 3 of a kind to clear"],["第一只跟着你出门的羊，草帽是它自己叼来的。","The first sheep to follow you out. The straw hat was its own idea."],["传说中被阳光亲吻过的羊，很少有人真的见过。","The legendary sheep kissed by sunlight. Few have truly seen one."],[new RegExp("这份补给还要再消 (\\d+) 组才会送上来","g"),"This supply arrives after $1 more sets"],["进了卡槽就开始倒数，数完还没消掉就直接失败","Starts counting down once in the slots. Reach zero before clearing it and you lose"],[new RegExp("签满 (\\d+) 天额外 羊毛 (\\d+)","g"),"+$2 wool on day $1"],[new RegExp("已有，转为碎片 ×1（当前 (\\d+)）","g"),"Already owned - converted to 1 shard (now $1)"],["喜欢在背阴的石头上打盹，毛里总有青苔味。","Naps on shaded stones. Its wool always smells faintly of moss."],["天没亮就出门，只为舔到最新鲜的那滴露水。","Heads out before dawn just to catch the freshest drop of dew."],["站在坡顶能看清三里外的草，眼神好得离谱。","From a hilltop it can pick out grass a mile off. Absurdly sharp eyes."],["极夜里见过天上的光，回来后毛就变了颜色。","Saw the lights during the polar night, and its wool changed colour after."],["通关有几率遇到新羊，点下面的头像即可出战","Clearing levels may drop new sheep; tap a portrait below to field it"],[new RegExp("限 (\\d+) 步内消够 (\\d+) 组","g"),"Clear $2 sets in $1 moves"],["锁着的牌，全场再消够指定组数就会自动解开","Locked. It opens once the board reaches the marked number of sets"],[new RegExp("在 (\\d+) 步内消除 (\\d+) 组","g"),"Clear $2 sets within $1 moves"],["不挑食，据说吃过牧场里所有能吃的东西。","Not a picky eater. Said to have tasted everything edible on the ranch."],["围巾是牧羊人织的，它一年四季都不肯摘。","The shepherd knitted the scarf. It refuses to take it off, all year round."],["连击窗口延长 1.5 秒，更容易连起来","Combo window extended by 1.5s, making chains easier"],["这里的规矩是：慢一点没关系，但别停下。","The rule up here: slow is fine, just do not stop."],["这个局面洗不出有解的排布，道具没有消耗","No solvable arrangement can be shuffled from this board; no item was spent"],["慢一点也没关系，草原上的路从来不催人。","Slow is fine. The meadow path never rushes anyone."],["今天的第一缕阳光，已经替你晒暖了牧场。","The first light of day has already warmed the pasture for you."],[new RegExp("连续签到 (\\d+) 天 · 点击领取","g"),"Streak $1 · Tap to claim"],["羊群全部安全回家啦，青草在为你鼓掌。","The whole flock made it home. The meadow is applauding."],["从很远的海边走来，还记得潮水的声音。","Walked here from a distant shore and still remembers the sound of the tide."],["总能踩到四叶草，连它自己都觉得奇怪。","Always steps on four-leaf clovers. Even it finds this strange."],["接下来每一波都多一个格子，效果会叠加","One extra slot every wave from now on; the effect stacks"],[new RegExp("(\\d+) 秒内消够 (\\d+) 组","g"),"Clear $2 sets in $1s"],["把卡槽里的牌临时挪出去，给三连腾地方","Moves tiles out of the slots to make room for a match"],["通关有几率遇到新羊，重复的会变成碎片","Clearing levels may drop new sheep; duplicates become shards"],["三星通关，羊群对你佩服得五体投地！","Three stars. The flock is thoroughly impressed."],["参考解法演示完毕 —— 它是能过的","Reference solution complete - it does clear"],["秋天最忙，据说能背回半亩地的麦穗。","Busiest in autumn. They say it can carry back half a field of wheat."],["冬天的粮仓管理员，睡觉也抱着草垛。","Winter's granary keeper. It even sleeps hugging a haystack."],["沉默寡言，撞过的石头比走过的路多。","A quiet one. It has bumped into more stones than it has walked paths."],["夏天会偷偷去果园，回来时脸是红的。","Sneaks off to the orchard in summer and comes back red-faced."],[new RegExp("第 (\\d+) 关 · 朋友的题面","g"),"Level $1 - a friend's board"],["先消掉旁边紧挨着的一张牌，才能解冻","Clear an adjacent tile first to thaw this one"],["这一局洗过牌，参考解法已经不适用了","This run was shuffled, so the reference solution no longer applies"],["通关一次就会记下你的用时与最高连击","Clearing a level records your time and best combo"],[new RegExp("通关 (\\d+) 个 Boss 关","g"),"Clear $1 boss levels"],["消掉它会额外掉羊毛，牧场建设就靠它","Clears for bonus wool, which pays for the ranch"],["走得远不如走得稳，羊群会一直等你。","Steady beats far. The flock will wait for you."],[new RegExp("今日已签 · 连续 (\\d+) 天","g"),"Checked in · $1-day streak"],[new RegExp("清掉最上面四层的 (\\d+) 张牌","g"),"Clear $1 tiles from the top 4 layers"],[new RegExp("开局自动解冻 (\\d+) 张冰冻牌","g"),"Auto-thaw $1 frozen tiles at start"],[new RegExp("开局自动翻开 (\\d+) 张谜之牌","g"),"Reveal $1 mystery tiles at start"],[new RegExp("连击窗口 \\+([\\d.]+) 秒","g"),"+$1s combo window"],["清空一波，挑一个增益带进下一波。","Clear a wave, then pick a buff to carry into the next one."],["黄昏时最好看，毛尖泛着淡淡的紫。","Loveliest at dusk, when the tips of its wool turn faintly purple."],["毛色像凝固的阳光，靠近会觉得暖。","Its wool looks like sunlight set solid; standing near it feels warm."],["爬过最高的墙，也蹭掉过最多的毛。","Has climbed the highest walls and rubbed off the most wool doing it."],["下一波开始花色少一种，配对更容易","One fewer kind from the next wave on, so matching is easier"],[new RegExp("灯笼照亮了 (\\d+) 张谜之牌","g"),"The lantern revealed $1 mystery tiles"],[new RegExp("还要再消 (\\d+) 组才能解锁","g"),"Clear $1 more sets to unlock"],[new RegExp("继续本局 · 第 (\\d+) 关","g"),"Resume · Level $1"],[new RegExp("继续闯关 · 第 (\\d+) 关","g"),"Continue · Level $1"],["走路很轻，远看像一朵挪动的云。","Walks so lightly that from afar it looks like a drifting cloud."],["路过的地方都会留下一股清凉气。","Leaves a trace of cool air wherever it passes."],["在河滩长大，蹄子上永远沾着泥。","Raised on the riverbank. There is always mud on its hooves."],["认得林子里每一株蕨，从不迷路。","Knows every fern in the wood and never gets lost."],["下一波少 12 张牌，跑得更快","12 fewer tiles next wave, so it runs faster"],[new RegExp("签到成功！金币 \\+(\\d+)","g"),"Checked in! +$1 coins"],["暗号看不懂，检查一下有没有打错","That code could not be read - check it for typos"],["重开新盘面，刚才那封战书已作废","New board started; the previous duel is void"],["牌面、道具、关卡目标与四种模式","Tiles, items, level goals and four modes"],[new RegExp("(\\d+) / (\\d+) 关","g"),"$1 / $2 levels"],[new RegExp("Total  (\\d+) 颗星","g"),"$1 stars total"],["消掉它会额外掉金币，看到就先拿","Clears for bonus coins. Grab it when you see it"],[new RegExp("再有 (\\d+) 次重复掉落必出新羊","g"),"$1 more duplicates guarantees a new sheep"],["本软件仅嵌入使用，未修改其字形","Embedded as-is; glyphs unmodified"],["有解洗牌 · 洗成最宽松局面","Solvable shuffle, loosest board possible"],[new RegExp("通关第 (\\d+) 关后解锁","g"),"Unlocks after clearing level $1"],["还没遇到这只羊，多通几关试试","You have not met this sheep yet - clear a few more levels"],["进度已清空，重新开始牧羊生活","Progress cleared. A new shepherding life begins"],["点击道具即可原地复活继续闯关","Tap an item to revive and keep going"],[new RegExp("图鉴掉落率 \\+(\\d+)%","g"),"+$1% codex drop"],[new RegExp("完成 (\\d+) 次每日挑战","g"),"Finish $1 Daily Challenges"],[new RegExp("收集到 (\\d+) 只传说羊","g"),"Collect $1 legendary sheep"],[new RegExp("牧场建设累计 (\\d+) 级","g"),"Reach ranch level $1 total"],["把盘面、卡槽、彩虹槽全部清空","Empty the board, slots and rainbow slots"],["把烦恼交给风，把青草留给羊。","Give your worries to the wind, and the grass to the sheep."],[new RegExp("（含连击 \\+(\\d+)）","g")," (incl. +$1 combo)"],["落雪那天出生，从此不怕冷。","Born on the day the snow fell, and never cold since."],["走到哪儿，哪儿的冰就化了。","Wherever it goes, the ice there melts."],["夜里会抬头很久，像在等谁。","Looks up for a long while at night, as if waiting for someone."],[new RegExp("还差 (\\d+) 就能领了","g"),"$1 more to claim"],[new RegExp("羊毛不够，还差 (\\d+)","g"),"Not enough wool - need $1 more"],["已重新洗牌 · 保证仍有解","Reshuffled - still solvable"],[new RegExp("历史最佳 (\\d+) 组。","g"),"Best ever $1 sets. "],["不服？把这局的暗号甩给朋友","Not done? Send this board to a friend"],[new RegExp("商店道具便宜 (\\d+)%","g"),"$1% off shop items"],[new RegExp("无尽模式消 (\\d+) 组","g"),"Clear $1 sets in Endless"],[new RegExp("收集全部 (\\d+) 只羊","g"),"Collect all $1 sheep"],["把被压在最底下的小羊挖出来","Dig out the sheep buried at the bottom"],["洗出来的一定还是有解的局面","The result is always still solvable"],[new RegExp("单局达成 (\\d+) 连击","g"),"Hit a $1-combo"],[new RegExp("消掉 (\\d+) 张奖励牌","g"),"Clear $1 reward tiles"],[new RegExp("金币产出 \\+(\\d+)%","g"),"+$1% coins"],[new RegExp("羊毛产出 \\+(\\d+)%","g"),"+$1% wool"],["立刻获得 2 个随机道具","Get 2 random items right away"],["再解锁一些成就就能换称号","Unlock more achievements to change your title"],["再点一次确认清空全部进度","Tap again to confirm wiping all progress"],["金币不足，先去通关攒点吧","Not enough coins - clear a few levels first"],[new RegExp("最快的一关 · (.+)","g"),"Fastest level · $1"],[new RegExp("累计通关 (\\d+) 关","g"),"Clear $1 levels total"],[new RegExp("解锁到第 (\\d+) 关","g"),"Unlock level $1"],[new RegExp("单局连击达到 (\\d+)","g"),"Reach a $1-combo in one run"],[new RegExp("累计消除 (\\d+) 组","g"),"Clear $1 sets total"],["在限定步数内消够指定组数","Clear the required sets within a move limit"],["消掉指定组数的某一种花色","Clear the required sets of one kind"],["清掉最上面四层的指定张数","Clear the required tiles from the top four layers"],["在限定秒数内消够指定组数","Clear the required sets within a time limit"],["牌面加字母角标，加粗描边","Adds letter tags and bolder outlines to tiles"],["有解洗牌 · 局面更宽松","Solvable shuffle, looser board"],[new RegExp("(\\d+)月(\\d+)日","g"),"$1/$2"],[new RegExp("还有 (\\d+) 项没领","g"),"$1 unclaimed"],["不用任何道具通关 1 次","Clear a level using no items"],[new RegExp("第 (\\d+) 波来了","g"),"Wave $1 incoming"],[new RegExp("神速需 (.+?) 内","g"),"Under $1 for Fast"],["卡槽多两格，但花色翻倍","Two extra slots, but twice the kinds"],[new RegExp("已撤回 (\\d+) 步","g"),"Undid $1 step(s)"],[new RegExp("已移出 (\\d+) 块","g"),"Moved $1 tiles out"],[new RegExp("升到 Lv.(\\d+)","g"),"reached Lv.$1"],[new RegExp("战书已接下 · 目标 ","g"),"Duel accepted - target "],["』用完了，去商店补货吧","\" is used up - restock at the shop"],["把这局的暗号分享给朋友","Share this board with a friend"],["进度已保存到本机浏览器","Progress saved to this browser"],["这一局没有可分享的暗号","This run has no code to share"],["道具不足，去商店看看吧","Out of items - check the shop"],[new RegExp("　金币 \\+(\\d+)","g"),"  +$1 coins"],[new RegExp("金币 \\+(\\d+)%","g"),"+$1% coins"],[new RegExp("羊毛 \\+(\\d+)%","g"),"+$1% wool"],[new RegExp("道具便宜 (\\d+)%","g"),"$1% off items"],[new RegExp("累计 (\\d+) 颗星","g"),"Collect $1 stars"],[new RegExp("收集 (\\d+) 只羊","g"),"Collect $1 sheep"],["把最近入槽的牌退回原位","Puts the most recent tile back"],["消掉它会随机送一个道具","Clears for a random item"],["每日特惠 · 青草集市","Daily Deal · Grass Market"],["过不去的关，道具来帮忙","Stuck? Items can help"],[new RegExp("消掉 (\\d+) 组 ","g"),"Clear $1 sets of "],["已重新洗牌，保证仍有解","Reshuffled - still solvable"],[new RegExp("金币 ([\\d,]+)","g"),"$1 coins"],[new RegExp("羊毛 ([\\d,]+)","g"),"$1 wool"],["不用道具通关 10 次","Clear 10 levels using no items"],["羊群已经在坡上等你了","The flock is waiting for you on the slope"],[new RegExp("任务完成！金币 \\+","g"),"Task complete! +"],[new RegExp("签到成功！金币 \\+","g"),"Checked in! +"],[new RegExp("兑换成功，牌面换成「","g"),"Redeemed. Tile skin set to \""],["青草正在生长中...","The grass is growing..."],["点下面的头像即可激活","Tap a portrait below to unlock"],["这个稀有度已经集齐了","This rarity is already complete"],["复活成功，继续加油！","Revived - keep going!"],[new RegExp("(\\d+) 关有记录","g"),"$1 levels with records"],["把被压住的小羊挖出来","Dig out the buried sheep"],["看看这局其实该怎么过","See how this board could be solved"],[new RegExp("累计 (\\d+) 关","g"),"$1 levels total"],[new RegExp("最佳 (\\d+) 组","g"),"Best $1 sets"],[new RegExp("通关 (\\d+) 关","g"),"Clear $1 levels"],[new RegExp("完成 (\\d+) 局","g"),"Finish $1 runs"],[new RegExp("限时 (\\d+) 秒","g"),"$1s limit"],["有 15 关拿到三星","Get 3 stars on 15 levels"],["炸弹倒数也会跟着重置","The bomb countdown resets too"],["通关必定掉落一只羊","Guarantees a sheep drop on clear"],[new RegExp("等 (\\d+) 项","g"),"and $1 more"],[" ×1 已放入背包"," x1 added to your bag"],[new RegExp("这份补给还要再消 ","g"),"This supply needs "],["还没有可撤回的操作","Nothing to undo yet"],["暗号不对，再看看？","Wrong code - take another look?"],["例如 3F9K2Q","e.g. 3F9K2Q"],["合成音，可随时关闭","Synthesized; can be turned off anytime"],["只在被消掉时给东西","Rewards on clear only"],[new RegExp("(\\d+) 日签到","g"),"$1-Day Check-in"],[new RegExp("第 (\\d+) 关","g"),"Level $1"],["有 1 关拿到三星","Get 3 stars on a level"],["有 5 关拿到三星","Get 3 stars on 5 levels"],["洗不出就不消耗道具","If none is found, no item is spent"],["连续撤回 3 步","Undo 3 steps in a row"],[new RegExp("羊毛不够，还差 ","g"),"Not enough wool - need "],["羊羊羊之草原牧歌","Sheep Meadow"],["神速 / 高连击","Fast / Big combo"],["今天已经签到过啦","Already checked in today"],["已恢复上次的进度","Restored your last run"],["卡槽只有 5 格","Only 5 slots"],["一半的牌盖着花色","Half the tiles are hidden"],["槽位移出 3 块","Move 3 tiles out"],["一次升级永久生效","One upgrade, permanent"],["连续撤回 2 步","Undo 2 steps in a row"],["卡槽只有 7 格","Only 7 slots"],["完成一次每日挑战","Finish a Daily Challenge"],[new RegExp("碎片 (\\d+)","g"),"$1 shards"],["赢了这场对决！","You won this duel!"],["冰冻牌大量出现","Frozen tiles everywhere"],["炸弹牌大量出现","Bomb tiles everywhere"],["还没有出战的羊","No sheep fielded yet"],["通 关 成 功","CLEARED"],["还没有激活的羊","No sheep unlocked yet"],["这项已经领过了","Already claimed"],["这一关还没解锁","This level is locked"],["已复制到剪贴板","Copied to clipboard"],["差 一 点 点","SO CLOSE"],[new RegExp("(\\d+) 片","g"),"$1 shards"],["初见 Boss","First Boss"],["Boss 克星","Boss Slayer"],["还没有任何纪录","No records yet"],["达成即自动发放","Granted automatically on completion"],["会改变取牌顺序","Changes the draw order"],["夜深了，牧羊人","Late night, Shepherd"],["早上好，牧羊人","Good morning, Shepherd"],["中午好，牧羊人","Good noon, Shepherd"],["下午好，牧羊人","Good afternoon, Shepherd"],["傍晚好，牧羊人","Good evening, Shepherd"],["本周新纪录！","New record this week!"],["今日新纪录！","New record today!"],["撤回 1 步","Undo 1 step"],["移出 5 张","Move out 5 tiles"],["移出 4 张","Move out 4 tiles"],["称号已换成「","Title changed to \""],[new RegExp("灯笼照亮了 ","g"),"The lantern revealed "],[new RegExp("碎片换来了 ","g"),"Shards traded for "],["昵称不能为空","The name cannot be empty"],["没有可洗的牌","Nothing left to shuffle"],["已经是满级了","Already at max level"],["参考解法回放","Solution Replay"],["羊群还在路上","The flock is still on its way"],["刷新了纪录！","New record! "],["历史最高连击","Best combo ever"],["建设等级合计","Build level total"],["可在商店升级","Upgradable in the shop"],["重新打乱堆叠","Reshuffle the stack"],["移出 3 张","Move out 3 tiles"],["晚安，牧羊人","Good night, Shepherd"],["节奏起来了!","In the zone!"],["羊群沸腾了!","The flock roars!"],["牧场全部建满","Max out the ranch"],["新羊入队！","New sheep joined! "],["这次差一点","So close this time"],[new RegExp("本关最佳 ","g"),"Best here "],["再挑战一次","Try again"],["花色多一种","One extra kind"],["连击不断!","Unstoppable!"],["手速惊人!","Lightning hands!"],["牧场之光!","Pride of the meadow!"],["完美主义者","Perfectionist"],["图鉴收藏家","Codex Collector"],["多一格卡槽","One extra slot"],["少一种花色","One fewer kind"],["连击更宽松","Looser combos"],["已经建满了","is already fully built"],["已经满级了","is already at max level"],[new RegExp("本周规则：","g"),"This week: "],[new RegExp("成就达成：","g"),"Achievement: "],[new RegExp("还要再消 ","g"),"Clear "],["已重置本关","Level reset"],["名字已更新","Name updated"],["卡槽是空的","The slots are empty"],["道具用尽了","Out of items"],["清空所有牌","Clear every tile"],["个人纪录墙","Personal Records"],["与四种模式","and four modes"],["出了新手村","Past the Basics"],["消了一百组","One Hundred Sets"],["消了五百组","Five Hundred Sets"],["小小收藏家","Little Collector"],["草原羊群榜","Meadow Leaderboard"],["图鉴掉落率","Codex drop rate"],["撤销上一步","Undo one step"],["手感不错!","On fire!"],["牧场之神!","Meadow legend!"],[new RegExp(" 用时 ","g")," time "],[new RegExp(" 连击 ","g")," combo "],["刷新最佳","New best"],["周常挑战","Weekly Challenge"],["每日挑战","Daily Challenge"],["新纪录！","New record!"],["再玩一次","Play again"],["返回草原","Back to Meadow"],["高连击 ","Big combo "],["最高连击","Best combo"],["消除组数","Sets cleared"],["有解洗牌","Solvable shuffle"],["熟练牧人","Skilled Herder"],["风雨无阻","Come Rain or Shine"],["传说饲主","Legendary Keeper"],["盘面缩小","Smaller board"],["补给两件","Two supplies"],["背景音乐","Music"],["色觉辅助","Colorblind aid"],["震动反馈","Haptics"],[" 已开启"," on"],[" 已关闭"," off"],[new RegExp("已换成「","g"),"Switched to \""],[new RegExp("通关第 ","g"),"Cleared level "],[new RegExp("已撤回 ","g"),"Undid "],[new RegExp("已移出 ","g"),"Moved out "],["草原副本","Meadow Run"],["未用道具","No items"],["关卡地图","Level Map"],["晨露草原","Dewfall Meadow"],["幽深森林","Deepwood"],["初雪高原","First Snow Plateau"],["星夜牧场","Starlit Pasture"],["碎片不够","Not enough shards"],["羊毛不够","Not enough wool"],["重开本关","Restart level"],["战书目标","Duel Goal"],["点击使用","Use"],["初次放羊","First Flock"],["小有所成","Getting Somewhere"],["熟能生巧","Practised Hand"],["牧场老手","Ranch Veteran"],["草原传说","Meadow Legend"],["越走越远","Ever Onward"],["翻过雪线","Over the Snowline"],["走到星夜","Into the Starlit Night"],["三十而立","Thirty Strong"],["星光满地","Sea of Stars"],["星河灿烂","Brilliant Galaxy"],["一尘不染","Spotless"],["五星连珠","Five in a Row"],["完美主义","Perfectionist"],["连击好手","Combo Adept"],["连击大师","Combo Master"],["消除机器","Clearing Machine"],["徒手过关","Bare Handed"],["老手风范","Veteran Style"],["今日打卡","Checked In"],["坚持一周","A Full Week"],["无尽入门","Endless Rookie"],["无尽好手","Endless Adept"],["半个图鉴","Half the Codex"],["图鉴全满","Codex Complete"],["传说降临","A Legend Arrives"],["初具规模","Taking Shape"],["最快一关","Fastest level"],["草原一角","A Corner of the Meadow"],["图标字体","Icon font"],["闯关模式","Adventure"],["清空全部","Clear everything"],["风车草地","Windmill Field"],["天空牧场","Sky Pasture"],["云海之巅","Cloud Peak"],["天际牧场","Skyline Pasture"],["宝箱营地","Treasure Camp"],["换个手感","Change the feel"],["怎么算赢","How you win"],["底部牌堆","Bottom stacks"],["必定有解","Always solvable"],["金币产出","Coin output"],["羊毛产出","Wool output"],["下一关","Next level"],["神速 ","Fast "],["最佳 ","Best "],["云朵羊","Cloud Sheep"],["露珠羊","Dewdrop Sheep"],["干草羊","Haystack Sheep"],["蕨叶羊","Fern Sheep"],["碎石羊","Pebble Sheep"],["蜜桃羊","Peach Sheep"],["紫丁羊","Lilac Sheep"],["橄榄羊","Olive Sheep"],["珊瑚羊","Coral Sheep"],["围巾羊","Scarf Sheep"],["初雪羊","First Snow Sheep"],["琥珀羊","Amber Sheep"],["常春羊","Ivy Sheep"],["暖阳羊","Sunwarm Sheep"],["千里羊","Farsight Sheep"],["四叶羊","Clover Sheep"],["星月羊","Starmoon Sheep"],["极光羊","Aurora Sheep"],["鎏金羊","Gilded Sheep"],["』牌面","\" tiles"],["」牌面","\" tiles"],["羊羊羊","SHEEP"],[new RegExp("还差 ","g"),"Need "],["知道了","Got it"],["未记录","No record"],["攒星星","Star Collector"],["小连击","Small Combo"],["牧场主","Ranch Owner"],["有记录","With records"],["三星关","3-star levels"],["字体依","Font under"],["图标依","Icons under"],["已遇到","Seen"],["可升级","Upgradable"],["晨露坡","Dewy Slope"],["微光林","Glimmer Wood"],["薄荷溪","Mint Creek"],["云杉谷","Spruce Vale"],["阳光丘","Sunny Knoll"],["苔藓洞","Moss Hollow"],["松果径","Pinecone Path"],["野花甸","Wildflower Flat"],["远山径","Far Hill Trail"],["星月原","Starmoon Plain"],["低语林","Whisper Wood"],["菌菇径","Mushroom Path"],["鹿鸣谷","Deer Call Vale"],["藤蔓崖","Vine Cliff"],["萤火沼","Firefly Marsh"],["古木道","Old Timber Road"],["静水潭","Still Pool"],["暮色岭","Dusk Ridge"],["初雪坡","First Snow Slope"],["冰棱谷","Icicle Vale"],["白桦道","Birch Road"],["霜风口","Frost Gap"],["雪兔径","Snow Hare Path"],["冻湖畔","Frozen Lakeside"],["银松林","Silver Pines"],["寒星台","Cold Star Terrace"],["雪线崖","Snowline Cliff"],["极光原","Aurora Plain"],["入云口","Cloudgate"],["金光坡","Golden Slope"],["浮岛渡","Floating Isle"],["霞光谷","Glow Vale"],["风起崖","Windrise Cliff"],["云中湖","Cloud Lake"],["日照原","Sunlit Plain"],["断云桥","Broken Cloud Bridge"],["天梯道","Sky Ladder"],["夜幕坡","Nightfall Slope"],["银河渡","Galaxy Crossing"],["月牙湾","Crescent Bay"],["流星径","Meteor Path"],["梦境园","Dream Garden"],["星尘谷","Stardust Vale"],["夜莺林","Nightingale Wood"],["幻光崖","Mirage Cliff"],["无垠原","Boundless Plain"],["使用中","In use"],["窄槽周","Narrow Week"],["宽槽周","Wide Week"],["迷雾周","Fog Week"],["缤纷周","Colorful Week"],["霜冻周","Frost Week"],["爆破周","Blast Week"],["今日 ","Today "],["漂亮!","Nice!"],["羊毛牌","Wool Tile"],["金币牌","Coin Tile"],["用时","Time"],["洗牌","Shuffle"],["撤回","Undo"],["移出","Move Out"],["音效","Sound"],["出发","Set off"],["跳过","Skip"],["已领","Claimed"],["领取","Claim"],["便宜","cheaper"],["合计","total"],["模式","Modes"],["富余","Spare "],["方阵","Square"],["菱形","Diamond"],["圆丘","Mound"],["松树","Pine"],["双峰","Twin Peaks"],["心形","Heart"],["高塔","Tower"],["清草","Fresh Grass"],["木纹","Woodgrain"],["云朵","Cloud"],["夜幕","Nightfall"],["默认","Default"],[" 期",""],[" 级",""],["周日","Sun"],["周一","Mon"],["周二","Tue"],["周三","Wed"],["周四","Thu"],["周五","Fri"],["周六","Sat"],["授权",""],["羊毛","Wool"],["金币","Coins"],["碎片","Shards"],["，",", "],["、",", "],["。",". "],["：",": "],["；","; "],["（"," ("],["）",") "]];
+const EN_DICT = {"羊羊羊之草原牧歌": "Sheep Meadow","草原牧歌": "Meadow Song","首页": "Home","关卡": "Levels","排行": "Ranks","商店": "Shop","我的": "Me","关卡地图": "Level Map","草原商店": "Meadow Shop","我的草原": "My Meadow","羊图鉴": "Sheep Codex","我的牧场": "My Ranch","成就徽章": "Achievements","玩法说明": "How to Play","关于本作": "About","本作": "This build","三种形态": "Three builds","数据与隐私": "Data & privacy","进度只存在本机": "Saved on this device only","不联网": "Offline","第三方署名": "Attribution","图标字体": "Icon font","确认清空": "Reset","清空进度": "Reset Progress","成就": "Achievements","称号": "Title","音效": "Sound","震动反馈": "Vibration","背景音乐": "Music","色觉辅助": "Colorblind Aid","语言": "Language","合成音，可随时关闭": "Synthesized, can be turned off","牌面加字母角标，加粗描边": "Adds letter tags and bolder outlines","连点两次确认": "Tap twice to confirm","每日挑战": "Daily Challenge","本周挑战": "Weekly Challenge","周常挑战": "Weekly Challenge","无尽草原": "Endless Meadow","输入暗号": "Enter Code","暗号": "Code","全服同题": "Same board for all","玩朋友的题面": "Play a friend’s board","闯关": "Adventure","继续闯关": "Continue","继续本局": "Resume","开始游戏": "Start","卡槽": "slots","彩虹槽": "Rainbow Slots","洗牌": "Shuffle","撤回": "Undo","移出": "Move Out","点击上方堆叠方块，凑齐 3 个相同的即可消除": "Tap unblocked tiles; match 3 of a kind to clear","清掉最上面四层的": "Clear from the top four layers:","张牌": " tiles","消除": "clear","组": " sets","连击": "Combo","用时": "Time","通关": "Cleared","失败": "Failed","下一关": "Next","再试一次": "Retry","返回草原": "Back to Meadow","复活": "Revive","参考解法": "Show Solution","重开": "Restart","暂停": "Pause","冰冻牌": "Frozen Tile","锁链牌": "Chained Tile","双层牌": "Double Tile","彩虹牌": "Rainbow Tile","炸弹牌": "Bomb Tile","谜之牌": "Mystery Tile","补给牌": "Supply Tile","金币牌": "Coin Tile","羊毛牌": "Wool Tile","礼盒牌": "Gift Tile","灯笼牌": "Lantern Tile","规则牌": "Rule Tiles","奖励牌": "Bonus Tiles","基本规则": "Basic Rules","金币": "Coins","羊毛": "Wool","碎片": "Shards","普通": "Common","稀有": "Rare","传说": "Legendary","未收集": "Not collected","已收集": "Collected","出战": "Active","金币产出": "Coin output","羊毛产出": "Wool output","道具": "Items","实用道具": "Items","道具升级": "Item Upgrades","牌面皮肤": "Tile Skins","青草地": "Grassland","风车": "Windmill","围栏": "Fence","羊圈": "Pen","建设等级": "Build level","关卡进度": "Level progress","日签到": "-Day Check-in","今日任务": "Daily Tasks","还有": "Still ","项没领": " unclaimed","点击领取": "Tap to claim","连续签到": "Streak","每日": "Daily","纪录墙": "Records","挑战": "Challenge","无尽": "Endless","对战": "Duel","最佳": "Best","历史最佳": "Best ever","胜": "W","负": "L","晨露草原": "Dawn Meadow","幽深森林": "Deep Forest","初雪高原": "First Snow","云海之巅": "Cloud Peak","星夜牧场": "Starlit Pasture","本章已通关": "Chapter cleared:","累计": "Total ","已重新洗牌，保证仍有解": "Reshuffled — still solvable","牧羊人": "Shepherd","傍晚好": "Good evening","早上好": "Good morning","中午好": "Good afternoon","晚上好": "Good evening","牧羊新手": "Novice Shepherd","青草认证牧羊人": "Certified Shepherd","宝箱关": "Treasure","宝箱营地": "Treasure Camp","进行中": "In progress","通关有几率遇到新羊，重复的会变成碎片": "Clearing levels may drop new sheep; duplicates become shards","已解锁": "Unlocked","枚": "","牌面": "Tiles","目标": "Goals","与四种模式": " and four modes","关卡目标": "Level Goals","四种模式": "four modes","道具、": "Items, ","牌面、": "Tiles, ","草帽羊": "Straw Hat","苔藓羊": "Moss","云朵羊": "Cloud","麦穗羊": "Wheat","薄荷羊": "Mint","陶土羊": "Clay","进度": "Progress","等级": "Level","资产": "Assets","重新洗牌": "Reshuffled","保证仍有解": "still solvable","开始": "Start","确认": "Confirm","取消": "Cancel","关闭": "Close","返回": "Back","恭喜": "Well done","太可惜": "So close","新纪录": "New record","消除组数": "Sets cleared","最高连击": "Best combo","评价": "Rating","收益": "Reward","剩余": "Left","不足": "Not enough","已满级": "Maxed","升级": "Upgrade","购买": "Buy","兑换": "Trade","领取": "Claim","已领取": "Claimed","解锁": "Unlock","锁定": "Locked","未解锁": "Locked","首领关": "Boss","限时": "Timed","限步": "Limited moves","指定花色": "Target suit","剥层": "Peel layers","救援": "Rescue","清空": "Clear all","暂无记录": "No records yet","最近": "Recent","战绩": "Record","胜率": "Win rate","当前": "Current ","签到": "Check-in","任务": "Tasks","奖励": "Reward","羊毛 +": "Wool +","金币 +": "Coins +","产出": " output","提升": "boost","概率": "chance","设置": "Settings","关于": "About","版本": "Version","牧场": "Ranch","建设": "Build","徽章": "Badges"};
 const EN_KEYS = Object.keys(EN_DICT).sort((a,b)=>b.length-a.length);
 /* 词表的键都是中文短语，不含正则元字符，故直接拼接；以后若加入含 . * ? 等符号的键，这里要补转义 */
 const EN_RE = new RegExp(EN_KEYS.join('|'),'g');
@@ -1637,9 +1663,9 @@ const SAVE_KEY='sheep-match-save-v1';
    而 load 的 catch 会把存档整个丢回默认值 —— 一次读取就抹掉全部进度） */
 const LV_CAP=200;
 const DEF_SAVE={
-  coins:300, wool:0, level:1, cleared:0, stars:{}, best:{},
+  coins:300, wool:0, coinFrac:0, woolFrac:0, level:1, cleared:0, stars:{}, best:{},
   tools:{shuffle:3,undo:3,out:2},
-  skin:'hat', owned:['hat'], pass:false,
+  skin:'hat', owned:['hat'],
   sound:true, vibrate:false,
   checkin:{date:'',streak:0}, name:'小羊牧歌', plays:0,
   progress:null, seenSp:[], daily:{}, endless:0,
@@ -1687,6 +1713,12 @@ function load(){
       .filter(r=>okObj(r)&&typeof r.score==='number')
       .map(r=>({score:num(r.score,0),wave:num(r.wave,1),t:r.t||''})).slice(0,10);
     s.endless=num(s.endless,0); s.pity=Math.max(0,num(s.pity,0));
+    /* 进位缓冲的小数部分：脏存档里一个字符串就能让 gainCoin 内的加法退化成
+       字符串拼接，Math.floor 出 NaN，金币从此永久变 NaN 并被 persist 成 null。
+       两个货币本体也一并洗一遍——它们之前同样没经过 num() */
+    s.coins=Math.max(0,num(s.coins,0)); s.wool=Math.max(0,num(s.wool,0));
+    s.coinFrac=Math.min(1,Math.max(0,num(s.coinFrac,0)));
+    s.woolFrac=Math.min(1,Math.max(0,num(s.woolFrac,0)));
     s.duel=Object.assign({win:0,lose:0,log:[]},okObj(s.duel));
     s.duel.win=num(s.duel.win,0); s.duel.lose=num(s.duel.lose,0);
     s.duel.log=(Array.isArray(s.duel.log)?s.duel.log:[])
@@ -1860,10 +1892,13 @@ function spMix(lv){
   const m={};
   if(lv>=3)  m.coin=.05;
   if(lv>=4)  m.dbl=.10;
-  if(lv>=5)  m.wool=.03;
+  if(lv>=5)  m.wool=.015;
   if(lv>=6)  m.rain=.09;
   if(lv>=8)  m.freeze=.08;
-  if(lv>=9)  m.gift=.02;
+  /* 礼盒牌只在宝箱关出（见 rawLevelDef 的 .02）。普通关每关白送一件的话，
+     单周目白拿 35 件，金币唯一的出口直接失效、溢出十倍。
+     顺带提醒：比率必须过得了 Math.round(总张数*比率) 这一关 —— 曾经写成
+     .003，在最大 120 张的盘面上算出来 0.36 取整为 0，全游戏一张都不生成。 */
   if(lv>=12) m.chain=.05;
   if(lv>=14) m.supply=.05;
   if(lv>=16) m.mystery=.07;
@@ -1898,7 +1933,7 @@ function rawLevelDef(lv){
     /* 宝箱关：稳赢 + 必掉图鉴，作用是给曲线一个喘息，不是给难度 */
     return { name:'宝箱营地', bonus:true, cfg:{
       n:36, layers:4, types:5, q:[6], d:3, shape:shapeOf(lv),
-      sp:{rain:.10, coin:.14, wool:.10, gift:.06}
+      sp:{rain:.10, coin:.05, wool:.02, gift:.02}
     }};
   }
   if(lv<=LEVELS.length){
@@ -1990,6 +2025,7 @@ function go(id){
   if(id==='s-mine') renderMine();
   if(id==='s-rank') renderRank();
   if(id==='s-help') renderHelp();
+  if(id==='s-about') renderAbout();
   applyLang(el);
 }
 document.addEventListener('click',e=>{
@@ -2810,6 +2846,10 @@ function startLevel(lv,snap){
                 : G.mode==='endless' ? waveLevel(G.wave)
                 : G.mode==='weekly' ? WEEKLY_LV
                 : G.lv;
+    /* 结算要用生成关号：每日/周常/无尽都走 startLevel(1)，G.lv 恒为 1，但盘面
+       是按 DAILY_LV / WEEKLY_LV / waveLevel(wave) 生成的。payReward 用 G.lv 的话
+       这三种模式的特殊牌收益全按第 1 关算，每日少发 120 金币、无尽第 10 波少发 228 */
+    G.genLv=genLv;
     /* 每一局都用一个明确的种子生成，这样任何一局都能被打包成暗号分享 */
     G.seed = G.mode==='daily' ? dailySeed()
            : G.mode==='weekly' ? (weekIndex()*7919)%16777216
@@ -2834,7 +2874,8 @@ function startLevel(lv,snap){
     G.rcfg={types:rc.types,d:rc.d};
     G.passivesDone=false;
     G.toolUsed=0; G.carried=0; G.maxCombo=0; G.matches=0; G.tray=[]; G.rain=[];
-    save.plays++; bumpTask('plays',1);
+    /* 任务进度不在这里加：连按重开就能把「开局 N 次」刷满，一分不花 */
+    save.plays++;
   }
   const L={name: G.mode==='daily' ? '每日挑战'
                 : G.mode==='endless' ? '无尽草原'
@@ -3118,14 +3159,19 @@ function tap(t){
 const TOOL_KEYS=['shuffle','undo','out'];
 function payReward(trio){
   let coin=0, wool=0, gifts=0, torches=0;
+  /* 关号必须封顶：无尽的 genLv 是 6+2*波次，无上限。上一轮封了波次平方项，
+     但第 80 波时平方项只占 13%，81% 的金币来自这里的 8+L*2 —— 封错了地方，
+     时薪照样线性无上界 */
+  const L=Math.min(G.genLv||G.lv,60);
   trio.forEach(t=>{
-    if(t.sp==='coin')  coin+=8+G.lv*2;
-    if(t.sp==='wool')  wool+=3+Math.floor(G.lv/3);
+    if(t.sp==='coin')  coin+=8+L*2;
+    if(t.sp==='wool')  wool+=3+Math.floor(L/3);
     if(t.sp==='gift')  gifts++;
     if(t.sp==='torch') torches++;
   });
-  if(coin){ save.coins+=Math.round(coin*coinMul()); }
-  if(wool){ save.wool+=Math.round(wool*woolMul()); }
+  let gotC=0, gotW=0;
+  if(coin) gotC=gainCoin(coin);
+  if(wool) gotW=gainWool(wool);
   for(let i=0;i<gifts;i++){ save.tools[TOOL_KEYS[rnd(3)]]++; }
   if(torches){
     const hid=G.tiles.filter(t=>!t.removed&&t.sp==='mystery'&&!t.shown).slice(0,torches*3);
@@ -3134,8 +3180,8 @@ function payReward(trio){
   }
   if(coin||wool||gifts){
     const bits=[];
-    if(coin) bits.push('金币 +'+Math.round(coin*coinMul()));
-    if(wool) bits.push('羊毛 +'+Math.round(wool*woolMul()));
+    if(coin) bits.push('金币 +'+gotC);
+    if(wool) bits.push('羊毛 +'+gotW);
     if(gifts) bits.push('道具 ×'+gifts);
     toast(bits.join(' · '));
     renderTools(); updateChips(); persist();
@@ -3427,16 +3473,36 @@ function winLevel(){
   const stars=1+(noTool?1:0)+((fast||hot)?1:0);
   /* 连击奖励封顶：手速快的玩家能一路连消到底，不封顶会盖过基础产出 */
   const comboBonus=Math.min(60,Math.max(0,G.maxCombo-1)*6);
-  const coin=Math.round((40+lv*12+stars*10+comboBonus)*coinMul());
-  const wool=Math.round((8+lv*3+stars*3)*woolMul());
-  save.coins+=coin; save.wool+=wool; save.cleared++;
+  /* 奖励挂钩盘面大小而不是关号：宝箱关盘面固定、几十秒就能打完，而
+     40+lv*12 是按正常关那种量设计的，不折算就成了可无限重刷的永动机。
+     分母 106 是第 13–55 关正常关的实测平均张数（G.tiles.length 含底部牌堆）；
+     第一版写的 78 其实是第 9 关的盘面，把整条曲线的绝对量放大了三成。
+     下限 0.55 给前三关兜底 —— 第 1 关只有 18 张，不兜底资源条几乎不动。 */
+  /* 按「实际消掉了多少张」而不是「盘面有多少张」：peel / rescue / collect
+     达标即结算，玩家只消掉盘面的 17%–42% 就能拿走全额奖励，不折算的话最优
+     刷法会从宝箱关搬到 peel 关。对清空目标两者完全等价。
+     下限只给前 12 关：它本来是兜底「第 1 关只有 18 张」的，但改用实际消除
+     张数之后，L13–60 里有 22 关会触发它，把 L59 救援关（只消 37 张）抬成
+     全游戏最优刷点。 */
+  const sizeK=Math.max(lv<=12?0.55:0.30,G.tiles.filter(t=>t.removed).length/106);
+  const coin=gainCoin((40+Math.min(lv,60)*12+stars*10+comboBonus)*sizeK);
+  /* 羊毛同样按 lv 封顶：地图能走到第 200 关，不封的话羊毛/金币比会一路走高 */
+  const wool=gainWool((5.4+Math.min(lv,60)*1.5+stars*1.9)*sizeK);
+  save.cleared++;
   save.st.matches=(save.st.matches||0)+G.matches;
   bumpTask('matches',G.matches); bumpTask('clears',1); bumpTask('combo',G.maxCombo);
-  bumpTask('spec',G.tiles.filter(t=>t.sp&&t.removed).length);
+  /* 只数奖励牌：原来把 rain / dbl / freeze / mystery / chain / supply 也算进去，
+     L40 一局就有 66 张，三档目标一局全做完 */
+  bumpTask('spec',G.tiles.filter(t=>t.removed&&REWARD_SP[t.sp]).length);
+  /* 闯关也要计入：只挂在每日与无尽上的话，纯闯关玩家这条永远做不完，
+     而最快解会变成重复打零收益的每日、或者开无尽故意送死 */
+  bumpTask('runs',1);
   save.st.bestCombo=Math.max(save.st.bestCombo||0,G.maxCombo);
   if(noTool) save.st.noTool=(save.st.noTool||0)+1;
   if(isBoss(lv)) save.st.boss=(save.st.boss||0)+1;
-  if(isBonus(lv)){ save.coins+=coin; }          /* 宝箱关金币翻倍 */
+  /* 宝箱关的身份由「掉落摇三次」承担，不再靠金币翻倍 —— 翻倍配上固定 36 张的
+     小盘面，等于一台可以无限重刷的永动机 */
+  if(isBonus(lv)){ gainCoin(60); }
   const drop=isBonus(lv) ? (rollDrop(lv)||rollDrop(lv)||rollDrop(lv)) : rollDrop(lv);
   save.stars[lv]=Math.max(save.stars[lv]||0,stars);
   const b=save.best[lv]||{};
@@ -3494,11 +3560,23 @@ function winDaily(){
   const prev=store[key];
   const isNew=!prev||time<prev.time;
   store[key]={time:isNew?time:prev.time, combo:Math.max(G.maxCombo,(prev&&prev.combo)||0), done:1};
-  const coin=Math.round((120+Math.max(0,G.maxCombo-1)*6)*coinMul());
-  save.coins+=coin;
+  /* 连击封顶要和 winLevel 一致，否则背下固定盘面就能刷满连击。
+     而且金币只在当天/当周第一次完成时发：题面全天固定、失败页还能看参考解法
+     回放，不限一次的话重刷就是白拿 */
+  const first=!prev||!prev.done;
+  const gross=(weekly?600:300)+Math.min(60,Math.max(0,G.maxCombo-1)*6);
+  const coin=first ? gainCoin(gross) : 0;
+  /* 限首次发币之后每日一度掉到 180 金 / 0 羊毛，比随手打一关同档正常关
+     （476 金 / 174 毛）还亏，唯一的日活钩子成了全局最差路线。
+     现在按「每天一份固定配额」重新定量，并补上羊毛 */
+  const dwool=first ? gainWool(weekly?120:60) : 0;
   /* 「完成每日挑战」只能由每日推进，否则打周常也能白拿每日任务奖励 */
-  if(!weekly){ save.st.daily=(save.st.daily||0)+1; bumpTask('dailyRun',1); }
-  bumpTask('matches',G.matches); bumpTask('combo',G.maxCombo);
+  /* 只在当天首次完成时计数：不加守卫的话重打 7 次每日（约 15 分钟）就能拿到
+     「坚持一周」，称号的语义就废了 */
+  if(!weekly && first){ save.st.daily=(save.st.daily||0)+1; bumpTask('dailyRun',1); }
+  bumpTask('matches',G.matches); bumpTask('combo',G.maxCombo); bumpTask('runs',1);
+  /* 奖励牌任务原来只由闯关推进，只打每日的玩家当天抽到它就必然做不完 */
+  bumpTask('spec',G.tiles.filter(t=>t.removed&&REWARD_SP[t.sp]).length);
   save.st.matches=(save.st.matches||0)+G.matches;
   save.st.bestCombo=Math.max(save.st.bestCombo||0,G.maxCombo);
   clearProgress(); persist(); checkAch();
@@ -3518,7 +3596,7 @@ function winDaily(){
   $('#ws-combo-box').classList.remove('rec');
   $('#win-best').textContent=isNew?(weekly?'本周新纪录！':'今日新纪录！'):'最佳 '+fmtTime(store[key].time);
   $('#win-coin').textContent='+'+coin;
-  $('#win-wool').textContent='+0';
+  $('#win-wool').textContent='+'+dwool;
   $('#win-next').textContent='再挑战一次';
   SFX.win(); buzz([18,60,18]);
   updateChips();
@@ -3534,12 +3612,41 @@ function gameOver(){
     const total=G.score+G.matches;
     const best=save.endless||0;
     if(total>best){ save.endless=total; }
-    save.endlessLog=save.endlessLog||[];
-    save.endlessLog.unshift({score:total, wave:G.wave, t:dateKey()});
-    save.endlessLog=save.endlessLog.slice(0,10);
-    save.coins+=Math.round(total*2); persist(); checkAch(); updateChips();
+    /* 按「水位」发差额，不是整局只发一次。
+       失败页复活只把 G.over 置回 false，G.score / G.wave / G.matches 全部原样
+       保留 —— 不设防的话每复活一次就能把同一份分数再兑现一遍（实测第 15 波
+       循环一次约 8 秒净赚 2200 金 = 99 万金/时，最优闯关路线的 26 倍）。
+       但只发一次也不行：那样第 15 波复活推到第 25 波会一分钱拿不到，
+       复活按钮在无尽里就废了。所以记下已结算的分数与波次，只补差额 ——
+       立刻二次死亡时差额恒为 0，那个循环仍然是负收益（还倒扣一件道具）。
+       波次项封顶 15：增益会把难度打到底线，之后每波耗时恒定而 8w² 还在涨。 */
+    const wCap=w=>Math.min(w,15)*w*8;
+    /* 无尽原来只有羊毛牌那点产出，羊毛时薪是闯关最优的 0.21 倍，而且不掉图鉴、
+       不推消除与奖励牌任务 —— 想要羊毛或图鉴的玩家永远不会开这个模式。
+       补一笔按波次的结算羊毛，量级上撼动不了闯关（约 0.45 倍），但不再是零。
+       和金币一样走水位差额，复活推进之后才拿得到新增的那部分 */
+    const wWool=w=>Math.min(w,15)*4;
+    const due=Math.max(0,total-(G.paidScore||0))*2
+            + Math.max(0,wCap(G.wave)-wCap(G.paidWave||0));
+    const dueW=Math.max(0,wWool(G.wave)-wWool(G.paidWave||0));
+    let ecoin=0, ewool=0;
+    if(due>0){
+      G.paidScore=total; G.paidWave=G.wave;
+      save.endlessLog=save.endlessLog||[];
+      /* 同一局复活后再死只更新那一条，不新增一条 */
+      if(G.logged) save.endlessLog[0]={score:total, wave:G.wave, t:dateKey()};
+      else { save.endlessLog.unshift({score:total, wave:G.wave, t:dateKey()}); G.logged=true; }
+      save.endlessLog=save.endlessLog.slice(0,10);
+      ecoin=gainCoin(due);
+      if(dueW) ewool=gainWool(dueW);
+      /* 开局就送死不算「完成一局」：不设门槛的话 26 秒能刷满 runs 目标 3，
+         比最短的闯关路线还快 2.7 倍，等于明示玩家故意失败是最优解 */
+      if(G.wave>=3 && !G.runsCounted){ G.runsCounted=true; bumpTask('runs',1); }
+    }
+    persist(); checkAch(); updateChips();
     $('#fail-sub').textContent='一共清了 '+total+' 组，撑到第 '+G.wave+' 波。'+
-      (total>best?'刷新了纪录！':'历史最佳 '+best+' 组。')+'　金币 +'+Math.round(total*2);
+      (total>best?'刷新了纪录！':'历史最佳 '+best+' 组。')+
+      (ecoin?'　金币 +'+ecoin+' · 羊毛 +'+ewool:'　本局奖励已结算过');
   }else if(G.deathBy==='steps'){
     $('#fail-sub').textContent='步数用完了！这一关要在限定步数内凑够指定组数。';
   }else if(G.deathBy==='time'){
@@ -3557,7 +3664,8 @@ function gameOver(){
 function renderFailTips(){
   $$('.btn-share').forEach(b=>{ b.style.display=(G.mode==='normal')?'flex':'none'; });
   const rb=$('#fail-replay');
-  if(rb){ rb.style.display=canReplay()?'flex':'none'; }
+  /* 每日与周常全服同题、成绩进排行，看完回放背下解法就能刷时间，所以不给回放 */
+  if(rb){ rb.style.display=(canReplay()&&G.mode==='normal')?'flex':'none'; }
   $$('#fail-tips .tip').forEach(el=>{
     const k=el.dataset.tool;
     el.querySelector('b').textContent=save.tools[k];
@@ -3827,7 +3935,7 @@ $('#replay-skip').onclick=stopReplay;
 $('#fail-replay').onclick=startReplay;
 $('#fail-retry').onclick=()=>{
   clearProgress();
-  if(G.mode==='endless'){ G.wave=1; G.score=0; G.buffs=null; }
+  if(G.mode==='endless'){ G.wave=1; G.score=0; G.buffs=null; G.paidScore=0; G.paidWave=0; G.logged=false; G.runsCounted=false; }
   go('s-game'); startLevel(G.lv); requestAnimationFrame(layout);
 };
 $('#win-next').onclick=()=>{
@@ -3862,7 +3970,7 @@ $('#btn-daily').onclick=()=>{
   go('s-game'); startLevel(1); requestAnimationFrame(layout);
 };
 $('#btn-endless').onclick=()=>{
-  G.mode='endless'; G.wave=1; G.score=0; G.buffs=null;
+  G.mode='endless'; G.wave=1; G.score=0; G.buffs=null; G.paidScore=0; G.paidWave=0; G.logged=false; G.runsCounted=false;
   go('s-game'); startLevel(1); requestAnimationFrame(layout);
 };
 $('#btn-weekly').onclick=()=>{
@@ -3935,8 +4043,8 @@ function renderCheckin(){
     const wrap=document.createElement('div');
     wrap.className='day';
     /* 奖励直接标在每一格上：原来要签到成功弹个 toast 才知道给了多少，
-       看不到「第 7 天有 100」就没有连签的动力。月卡加成也算进去，显示的就是实得数 */
-    const base=CK_COIN[i], real=save.pass?base*2+40:base;
+       看不到「第 7 天有 100」就没有连签的动力 */
+    const real=CK_COIN[i];
     wrap.innerHTML='<div class="dot'+(isToday&&!claimed?' today':(isDone?' done':''))+'">'+
       (isDone&&!(isToday&&!claimed)?'<i class="fa-solid fa-check"></i>':(i+1))+'</div>'+
       '<span'+(isToday?' class="on"':'')+'>'+WD[day.getDay()]+'</span>'+
@@ -3954,15 +4062,11 @@ function doCheckin(){
   if(ck.date===dateKey()){ toast('今天已经签到过啦'); return; }
   ck.streak = (ck.date===yesterdayKey()) ? Math.min(7,(ck.streak||0)+1) : 1;
   ck.date=dateKey();
-  let coin=CK_COIN[ck.streak-1];
-  if(save.pass) coin=coin*2+40;
-  save.coins+=coin;
+  /* 签到与无尽原来直接 += 不走乘区：四条收入渠道两条吃养成、两条不吃，
+     玩家建立不起一致的心智模型 */
+  const coin=gainCoin(CK_COIN[ck.streak-1]);
   let extra='';
-  if(ck.streak===7){ save.wool+=20; extra=' + 羊毛 20'; }
-  if(save.pass){
-    const k=['shuffle','undo','out'][rnd(3)];
-    save.tools[k]++; extra+=' + 随机道具 ×1';
-  }
+  if(ck.streak===7){ extra=' + 羊毛 '+gainWool(20); }
   persist(); SFX.coin();
   toast('签到成功！金币 +'+coin+extra);
   renderCheckin(); updateChips();
@@ -4068,7 +4172,10 @@ $('#ch-next').onclick=()=>renderLevels(mapCh+1);
 /* =====================================================================
    商店
    ===================================================================== */
-const PRICE={shuffle:120,undo:80,out:200};
+/* 道具必须是稀缺品，因为它是金币唯一的去处。礼盒牌现在只在宝箱关出（每章一件），
+   收支打平点原来落在「每关用 1.77 件」，而实际白拿量只有 0.24 件/关 —— 中间那段
+   全是溢出。再抬一档把打平点压到 0.72 件/关。 */
+const PRICE={shuffle:800,undo:500,out:1200};
 const TILE_SKINS={plain:{n:'清草',cost:0},wood:{n:'木纹',cost:150},cloud:{n:'云朵',cost:260},night:{n:'夜幕',cost:400}};
 function renderShop(){
   $$('#s-shop .t-card').forEach(c=>{
@@ -4170,7 +4277,7 @@ function renderRank(){
      宁可显示一句「读不出来」，也不要一个从此再也点不出来的死标签 */
   let html;
   try{ html=({best:rkBest,daily:rkDaily,endless:rkEndless,duel:rkDuel})[rkTab](); }
-  catch(e){ html=rkEmpty('fa-triangle-exclamation','这一栏的记录读不出来<br>存档里的数据可能已损坏'); }
+  catch(e){ html=rkEmpty('fa-circle-info','这一栏的记录读不出来<br>存档里的数据可能已损坏'); }
   $('#rk-panel').innerHTML=storageWarn()+html;
   updateChips();
 }
@@ -4225,7 +4332,7 @@ function rkBest(){
     /* 取全局与墙上行的较大值：老存档里 st.bestCombo 可能比行里的数还小，
        同屏出现「行 ×3 / 头部 ×0」比数字本身不准更显眼 */
     const cb=timed.reduce((a,lv)=>Math.max(a,src[lv].combo||0),save.st.bestCombo||0);
-    head+='<div class="rk-row"><span class="n"><i class="fa-solid fa-bolt"></i></span><span class="t">最快的一关 · '+levelName(fast)+'</span>'+
+    head+='<div class="rk-row"><span class="n"><i class="fa-solid fa-hourglass-half"></i></span><span class="t">最快的一关 · '+levelName(fast)+'</span>'+
       '<span class="v">'+fmtTime(src[fast].time)+'</span></div>'+
       '<div class="rk-row"><span class="n"><i class="fa-solid fa-fire"></i></span><span class="t">历史最高连击</span>'+
       '<span class="v">×'+cb+'</span></div>';
@@ -4237,7 +4344,7 @@ function rkBest(){
 /* 存档写不进去时（部分手机浏览器以本地文件打开会禁用 DOM 存储），
    成绩只活在这一次会话里。不提示的话，玩家只会觉得「数据莫名其妙没了」 */
 function storageWarn(){
-  return STORAGE_OK?'':'<div class="rk-card"><div class="rk-empty"><i class="fa-solid fa-triangle-exclamation"></i>'+
+  return STORAGE_OK?'':'<div class="rk-card"><div class="rk-empty"><i class="fa-solid fa-circle-info"></i>'+
     '当前浏览器禁止本地存档<br>成绩只保留到这个页面关闭为止，换用系统浏览器打开可解决</div></div>';
 }
 
@@ -4374,16 +4481,19 @@ const HELP_BASE=[
 const HELP_MODES=[
   /* 章节数按 CHAPTERS.length 说：50 关 ÷ CH_SIZE(10) = 5 章，原来写的「四个章节」
      与 CHAPTERS 里实际的五个章节对不上。宝箱关 isBonus 排除了前 12 关，第一章没有 */
-  ['fa-map','闯关','50 关，五个章节。每章第 10 关是 BOSS 关；第二章起每章第 5 关是宝箱关，金币翻倍、必掉图鉴。'],
+  ['fa-map','闯关','50 关，五个章节。每章第 10 关是 BOSS 关；第二章起每章第 5 关是宝箱关，图鉴掉落判定三次、必出。'],
   ['fa-calendar-day','每日挑战','全服同一套题面，每天换一次。因为同题，成绩才有可比性。'],
   ['fa-calendar-week','周常挑战','每周一换一套变体规则（窄槽、迷雾、爆破等），同一周内全服相同。'],
   ['fa-infinity','无尽草原','一波清完接下一波，每波更难，中途可选增益。比的是累计消除组数。']
 ];
+/* 玩法说明与关于两页共用同一套卡片结构 */
+const hpCard=(title,rows)=>'<div class="hp-card"><div class="hp-hd">'+title+'</div>'+rows+'</div>';
+const hpRow=(ico,name,tip,extra)=>'<div class="hp-row"><div class="hp-ico"><i class="fa-solid '+ico+'"></i></div>'+
+  '<div class="hp-t"><b>'+name+'</b><span>'+tip+'</span></div>'+(extra||'')+'</div>';
+
 function renderHelp(){
   const box=$('#help-body'); if(!box) return;
-  const card=(title,rows)=>'<div class="hp-card"><div class="hp-hd">'+title+'</div>'+rows+'</div>';
-  const row=(ico,name,tip,extra)=>'<div class="hp-row"><div class="hp-ico"><i class="fa-solid '+ico+'"></i></div>'+
-    '<div class="hp-t"><b>'+name+'</b><span>'+tip+'</span></div>'+(extra||'')+'</div>';
+  const card=hpCard, row=hpRow;
 
   let html=card('基本规则', HELP_BASE.map(r=>row(r[0],r[1],r[2])).join(''));
 
@@ -4416,13 +4526,27 @@ function renderHelp(){
      ['fa-hourglass-half','限时','在限定秒数内消够指定组数']].map(r=>row(r[0],r[1],r[2])).join(''));
 
   html+=card('模式', HELP_MODES.map(r=>row(r[0],r[1],r[2])).join(''));
-  /* 第三方署名：图标字体是 CC BY 4.0，许可要求署名，且要放在用户看得到的地方 */
-  html+=card('关于', row('fa-circle-info','羊羊羊之草原牧歌 V1.0','单文件网页实现，全部资源内嵌，运行期间不请求任何外部资源。')+
-    row('fa-tag','图标字体 Font Awesome 6 Free','Copyright (c) Fonticons, Inc.　字体依 SIL OFL 1.1、图标依 CC BY 4.0 授权，本软件仅嵌入使用，未修改其字形。'));
   box.innerHTML=html;
 }
 
-/* 碎片兑换 + 保底进度 + 全收集奖励，都放在图鉴顶部 */
+function renderAbout(){
+  const box=$('#about-body'); if(!box) return;
+  let html=hpCard('本作',
+    hpRow('fa-circle-info','羊羊羊之草原牧歌 V1.0','单文件网页实现，全部资源内嵌，运行期间不请求任何外部资源。')+
+    hpRow('fa-mobile-screen','三种形态','网页、安卓应用与微信小游戏共用同一套算法实现，玩法与数值完全一致。'));
+  html+=hpCard('数据与隐私',
+    hpRow('fa-house','进度只存在本机','保存在浏览器或应用的本地存储里，没有账号也没有云端备份；卸载或清除数据会一并丢失。')+
+    hpRow('fa-lock','不联网','运行期间不请求任何外部资源，不上传任何数据，安卓版未申请任何系统权限。'));
+  /* 第三方署名：图标字体是 CC BY 4.0，许可要求署名，且要放在用户看得到的地方 */
+  html+=hpCard('第三方署名',
+    hpRow('fa-tag','图标字体 Font Awesome 6 Free','Copyright (c) Fonticons, Inc.　字体依 SIL OFL 1.1、图标依 CC BY 4.0 授权，本软件仅嵌入使用，未修改其字形。'));
+  box.innerHTML=html;
+}
+
+/* 保底进度 + 全收集奖励，放在图鉴顶部。
+   这里原本还有一块「富余碎片兑换缺的羊」：三轮建模都显示它是死代码
+   （3000 次周目触发 0.04 次），而真触发时又会把满级羊扣到掉级，已整块移除。
+   PITY_N 的保底比它更强也更直观，下面那行进度就是它。 */
 function renderDexEx(ownN){
   const box=$('#dex-ex'); if(!box) return;
   if(dexFull()){
@@ -4432,23 +4556,16 @@ function renderDexEx(ownN){
     return;
   }
   box.className='dex-ex';
-  const sp=surplusShards(), left=Math.max(0,PITY_N-(save.pity||0));
-  const btns=[1,2,3].map(r=>{
-    const fresh=SHEEP.filter(s=>s.r===r&&!(save.dex||{})[s.id]).length;
-    const cost=EXCHANGE[r], can=fresh&&sp>=cost;
-    return '<button class="ex-b'+(can?'':' off')+'" data-ex="'+r+'">'+
-      '<b>'+RARITY[r]+'</b><span>'+(fresh?cost+' 片':'已集齐')+'</span></button>';
-  }).join('');
-  box.innerHTML='<div class="ex-hd"><b><i class="fa-solid fa-puzzle-piece"></i> 富余碎片 '+sp+'</b>'+
-    '<span>满级羊多出来的碎片可以换缺的羊</span></div><div class="ex-row">'+btns+'</div>'+
+  const left=Math.max(0,PITY_N-(save.pity||0));
+  box.innerHTML='<div class="ex-hd"><b><i class="fa-solid fa-clover"></i> 收集保底</b>'+
+    '<span>重复掉落会变成碎片，攒够可以升羊的等级</span></div>'+
     '<div class="ex-note">再有 '+left+' 次重复掉落必出新羊</div>';
-  box.querySelectorAll('[data-ex]').forEach(b=>b.onclick=()=>exchangeSheep(+b.dataset.ex));
 }
 function renderFarm(){
   $('#farm-wool').textContent=fmt(save.wool);
   const total=Object.values(save.farm||{}).reduce((a,b)=>a+b,0);
-  $('#farm-title').textContent = total>=20?'丰饶牧场' : total>=12?'像样的牧场' : total>=5?'初具规模' : '草原一角';
-  $('#farm-sub').textContent='建设等级合计 '+total+' / 20 · 金币 +'+(farmLv('grass')*2)+'% · 羊毛 +'+(farmLv('mill')*2)+'%';
+  $('#farm-title').textContent = total>=32?'丰饶牧场' : total>=19?'像样的牧场' : total>=8?'初具规模' : '草原一角';
+  $('#farm-sub').textContent='建设等级合计 '+total+' / 32 · 金币 +'+(farmLv('grass')*2)+'% · 羊毛 +'+(farmLv('mill')*2)+'%';
   const list=$('#farm-list'); list.innerHTML='';
   FARM.forEach(f=>{
     const lv=farmLv(f.id), max=lv>=f.max, cost=f.cost(lv), poor=save.wool<cost;
@@ -4508,7 +4625,7 @@ function renderMine(){
   $('#badge-n').textContent=(save.ach||[]).length;
   $('#bag-sub').textContent='已收集 '+Object.keys(save.dex||{}).length+' / '+SHEEP.length+
     (activeSheep()?(' · 出战 '+activeSheep().n):'');
-  $('#farm-row-sub').textContent='建设等级 '+Object.values(save.farm||{}).reduce((a,b)=>a+b,0)+' / 20';
+  $('#farm-row-sub').textContent='建设等级 '+Object.values(save.farm||{}).reduce((a,b)=>a+b,0)+' / 32';
   document.addEventListener('click',e=>{
   const b=e.target.closest('#lang-pick b');
   if(!b) return;
@@ -4547,20 +4664,15 @@ $('#me-title').onclick=()=>{
   save.title=next[1]; persist(); renderMine();
   toast(ok.length>1?('称号已换成「'+next[1]+'」'):'再解锁一些成就就能换称号');
 };
-$('#row-cloud').onclick=()=>{ persist(); toast('进度已保存到本机浏览器'); };
-$('#row-about').onclick=()=>toast('羊羊羊之草原牧歌 V1.0');
-let resetArm=0;
-$('#row-reset').onclick=()=>{
-  const now=Date.now();
-  if(now-resetArm<3000){
-    localStorage.removeItem(SAVE_KEY);
-    save=load(); applySkin(); renderMine(); updateChips();
-    toast('进度已清空，重新开始牧羊生活');
-    resetArm=0;
-  }else{
-    resetArm=now;
-    toast('再点一次确认清空全部进度');
-  }
+$('#row-about').onclick=()=>go('s-about');
+$('#row-reset').onclick=()=>$('#resetMask').classList.add('on');
+$('#reset-cancel').onclick=()=>$('#resetMask').classList.remove('on');
+$('#resetMask').onclick=e=>{ if(e.target.id==='resetMask') $('#resetMask').classList.remove('on'); };
+$('#reset-go').onclick=()=>{
+  $('#resetMask').classList.remove('on');
+  localStorage.removeItem(SAVE_KEY);
+  save=load(); applySkin(); renderMine(); updateChips();
+  toast('进度已清空，重新开始牧羊生活');
 };
 
 /* =====================================================================
@@ -4679,33 +4791,10 @@ const PASSIVE_TXT={
   drop:v=>'图鉴掉落率 +'+v+'%',
   luck:v=>'通关必定掉落一只羊'
 };
-/* 羊等级：重复掉落攒碎片，3 / 8 片升一级，效果 ×1.5 / ×2 */
-const SHARD_NEED=[0,3,8];
-const SHARD_MAX=8;      /* 超过这个数的碎片对本羊已无用，可以拿去兑换缺的羊 */
-const PITY_N=12;        /* 连续 12 次掉落都是重复，下一次必给新羊 */
-const EXCHANGE={1:6, 2:12, 3:25};   /* 兑换一只未收集的羊要多少富余碎片 */
-function surplusShards(){
-  return Object.keys(save.dex||{}).reduce((a,id)=>a+Math.max(0,((save.dex[id]||{}).s||0)-SHARD_MAX),0);
-}
+/* 羊等级：重复掉落攒碎片，2 / 4 片升一级，效果 ×1.5 / ×2 */
+const SHARD_NEED=[0,2,4];
+const PITY_N=8;         /* 连续 8 次掉落都是重复，下一次必给新羊 */
 function dexFull(){ return Object.keys(save.dex||{}).length>=SHEEP.length; }
-/* 兑换：只花「已经没用的」碎片，从富余最多的羊身上先扣，
-   所以不会把还在升级路上的羊拆掉 */
-function exchangeSheep(r){
-  const fresh=SHEEP.filter(s=>s.r===r&&!(save.dex||{})[s.id]);
-  if(!fresh.length){ toast('这个稀有度已经集齐了'); SFX.deny(); return; }
-  const cost=EXCHANGE[r], have=surplusShards();
-  if(have<cost){ toast('富余碎片不够，还差 '+(cost-have)+' 片'); SFX.deny(); return; }
-  let need=cost;
-  Object.keys(save.dex).sort((a,b)=>(save.dex[b].s||0)-(save.dex[a].s||0)).forEach(id=>{
-    if(need<=0) return;
-    const take=Math.min(Math.max(0,(save.dex[id].s||0)-SHARD_MAX),need);
-    save.dex[id].s-=take; need-=take;
-  });
-  const pick=fresh[Math.floor(Math.random()*fresh.length)];
-  save.dex[pick.id]={s:0}; save.pity=0;
-  persist(); checkAch(); renderDex(); SFX.coin();
-  toast('碎片换来了 '+pick.n+'：'+pick.s);
-}
 function sheepLv(id){
   const sh=(save.dex||{})[id]; if(!sh) return 0;
   return sh.s>=SHARD_NEED[2]?3 : sh.s>=SHARD_NEED[1]?2 : 1;
@@ -4720,10 +4809,13 @@ function passive(type){
 
 /* --- 牧场：4 项建设，纯经济加成，完全不碰难度 --- */
 const FARM=[
-  {id:'grass', n:'青草地', ico:'fa-seedling', max:5, cost:l=>60+l*40,  desc:l=>'金币产出 +'+(l*2)+'%'},
-  {id:'mill',  n:'风车',   ico:'fa-fan',       max:5, cost:l=>80+l*50,  desc:l=>'羊毛产出 +'+(l*2)+'%'},
-  {id:'fence', n:'围栏',   ico:'fa-border-all',max:5, cost:l=>70+l*45,  desc:l=>'商店道具便宜 '+(l*3)+'%'},
-  {id:'pen',   n:'羊圈',   ico:'fa-house-chimney', max:5, cost:l=>90+l*60, desc:l=>'图鉴掉落率 +'+(l*4)+'%'}
+  /* 上限 8 而不是 5：沉淀只有 7470 时，20 分钟/天的玩家第 8–11 天就把牧场、
+     皮肤、道具升级全买空，之后羊毛继续涨却再也没有出口。成本函数原样往上延伸，
+     四条合计 5520 → 11136。代价是各项效果的上限也跟着抬（见 coinMul 那里的注释）。 */
+  {id:'grass', n:'青草地', ico:'fa-seedling', max:8, cost:l=>96+l*64,  desc:l=>'金币产出 +'+(l*2)+'%'},
+  {id:'mill',  n:'风车',   ico:'fa-fan',       max:8, cost:l=>128+l*80, desc:l=>'羊毛产出 +'+(l*2)+'%'},
+  {id:'fence', n:'围栏',   ico:'fa-border-all',max:8, cost:l=>112+l*72, desc:l=>'商店道具便宜 '+(l*3)+'%'},
+  {id:'pen',   n:'羊圈',   ico:'fa-house-chimney', max:8, cost:l=>144+l*96, desc:l=>'图鉴掉落率 +'+(l*4)+'%'}
 ];
 function farmLv(id){ return (save.farm||{})[id]||0; }
 /* 图鉴全满：+5% 金币与羊毛。只碰经济不碰难度，
@@ -4732,6 +4824,17 @@ function dexFullBonus(){ return dexFull()?0.05:0; }
 function coinMul(){ return 1 + farmLv('grass')*0.02 + passive('coin')/100 + dexFullBonus(); }
 function woolMul(){ return 1 + farmLv('mill')*0.02 + passive('wool')/100 + dexFullBonus(); }
 function priceMul(){ return 1 - farmLv('fence')*0.03; }
+/* 逐笔 Math.round 会把小额奖励的乘区收益整个抹平：11 羊毛 ×1.02 还是 11，
+   玩家升了牧场却看不到任何变化，会以为养成是假的。改成把小数部分攒在存档里，
+   满 1 再进位 —— 长期总量与理论值一致，小额奖励也不再吃掉整个乘区。 */
+function gainCoin(base){
+  const v=base*coinMul()+(save.coinFrac||0);
+  const n=Math.floor(v); save.coinFrac=v-n; save.coins+=n; return n;
+}
+function gainWool(base){
+  const v=base*woolMul()+(save.woolFrac||0);
+  const n=Math.floor(v); save.woolFrac=v-n; save.wool+=n; return n;
+}
 function dropRate(){ return 0.34 + farmLv('pen')*0.04 + passive('drop')/100; }
 
 /* --- 道具等级：用难度旋钮做洗牌升级，洗出来的局面必胜路线更宽 --- */
@@ -4744,42 +4847,43 @@ function toolLv(k){ return (save.toolLv||{})[k]||1; }
 
 /* --- 成就：36 条，全部由真实统计推出 --- */
 const ACH=[
-  ['first','初次放羊','通关第 1 关',s=>s.cleared>=1,20],
-  ['c5','小有所成','累计通关 5 关',s=>s.cleared>=5,20],
-  ['c15','熟能生巧','累计通关 15 关',s=>s.cleared>=15,30],
-  ['c40','牧场老手','累计通关 40 关',s=>s.cleared>=40,50],
-  ['c80','草原传说','累计通关 80 关',s=>s.cleared>=80,80],
-  ['lv5','越走越远','解锁到第 5 关',s=>s.level>=5,20],
-  ['lv12','出了新手村','解锁到第 12 关',s=>s.level>=12,30],
-  ['lv21','翻过雪线','解锁到第 21 关',s=>s.level>=21,50],
-  ['lv31','走到星夜','解锁到第 31 关',s=>s.level>=31,80],
-  ['st10','攒星星','累计 10 颗星',s=>starTotal()>=10,20],
-  ['st30','三十而立','累计 30 颗星',s=>starTotal()>=30,40],
-  ['st60','星光满地','累计 60 颗星',s=>starTotal()>=60,70],
-  ['st99','星河灿烂','累计 99 颗星',s=>starTotal()>=99,120],
-  ['perfect','一尘不染','有 1 关拿到三星',s=>Object.values(s.stars||{}).some(v=>v>=3),25],
-  ['perfect5','五星连珠','有 5 关拿到三星',s=>Object.values(s.stars||{}).filter(v=>v>=3).length>=5,45],
-  ['perfect15','完美主义','有 15 关拿到三星',s=>Object.values(s.stars||{}).filter(v=>v>=3).length>=15,90],
-  ['combo5','小连击','单局连击达到 5',s=>(s.st.bestCombo||0)>=5,20],
-  ['combo10','连击好手','单局连击达到 10',s=>(s.st.bestCombo||0)>=10,35],
-  ['combo20','连击大师','单局连击达到 20',s=>(s.st.bestCombo||0)>=20,70],
-  ['m100','消了一百组','累计消除 100 组',s=>(s.st.matches||0)>=100,20],
-  ['m500','消了五百组','累计消除 500 组',s=>(s.st.matches||0)>=500,40],
-  ['m2000','消除机器','累计消除 2000 组',s=>(s.st.matches||0)>=2000,90],
-  ['boss1','初见 Boss','通关 1 个 Boss 关',s=>(s.st.boss||0)>=1,40],
-  ['boss3','Boss 克星','通关 3 个 Boss 关',s=>(s.st.boss||0)>=3,80],
-  ['notool','徒手过关','不用任何道具通关 1 次',s=>(s.st.noTool||0)>=1,25],
-  ['notool10','老手风范','不用道具通关 10 次',s=>(s.st.noTool||0)>=10,60],
-  ['daily1','今日打卡','完成 1 次每日挑战',s=>(s.st.daily||0)>=1,25],
-  ['daily7','坚持一周','完成 7 次每日挑战',s=>(s.st.daily||0)>=7,70],
-  ['endless20','无尽入门','无尽模式消 20 组',s=>(s.endless||0)>=20,25],
-  ['endless60','无尽好手','无尽模式消 60 组',s=>(s.endless||0)>=60,60],
-  ['dex5','小小收藏家','收集 5 只羊',s=>Object.keys(s.dex||{}).length>=5,30],
-  ['dex12','半个图鉴','收集 12 只羊',s=>Object.keys(s.dex||{}).length>=12,60],
-  ['dex24','图鉴全满','收集全部 24 只羊',s=>Object.keys(s.dex||{}).length>=24,150],
-  ['sr','传说降临','收集到 1 只传说羊',s=>Object.keys(s.dex||{}).some(id=>SHEEP_BY[id]&&SHEEP_BY[id].r===3),80],
-  ['farm5','初具规模','牧场建设累计 5 级',s=>Object.values(s.farm||{}).reduce((a,b)=>a+b,0)>=5,40],
-  ['farm20','牧场主','牧场全部建满',s=>Object.values(s.farm||{}).reduce((a,b)=>a+b,0)>=20,120]
+  ['first','初次放羊','通关第 1 关',s=>s.cleared>=1,12],
+  ['c5','小有所成','累计通关 5 关',s=>s.cleared>=5,12],
+  ['c15','熟能生巧','累计通关 15 关',s=>s.cleared>=15,18],
+  ['c40','牧场老手','累计通关 40 关',s=>s.cleared>=40,30],
+  ['c80','草原传说','累计通关 80 关',s=>s.cleared>=80,48],
+  ['lv5','越走越远','解锁到第 5 关',s=>s.level>=5,12],
+  ['lv12','出了新手村','解锁到第 12 关',s=>s.level>=12,18],
+  ['lv21','翻过雪线','解锁到第 21 关',s=>s.level>=21,30],
+  ['lv31','走到星夜','解锁到第 31 关',s=>s.level>=31,48],
+  ['st10','攒星星','累计 10 颗星',s=>starTotal()>=10,12],
+  ['st30','三十而立','累计 30 颗星',s=>starTotal()>=30,24],
+  ['st60','星光满地','累计 60 颗星',s=>starTotal()>=60,42],
+  ['st99','星河灿烂','累计 99 颗星',s=>starTotal()>=99,72],
+  ['perfect','一尘不染','有 1 关拿到三星',s=>Object.values(s.stars||{}).some(v=>v>=3),15],
+  ['perfect5','五星连珠','有 5 关拿到三星',s=>Object.values(s.stars||{}).filter(v=>v>=3).length>=5,27],
+  ['perfect15','完美主义','有 15 关拿到三星',s=>Object.values(s.stars||{}).filter(v=>v>=3).length>=15,54],
+  ['combo5','小连击','单局连击达到 5',s=>(s.st.bestCombo||0)>=5,12],
+  ['combo10','连击好手','单局连击达到 10',s=>(s.st.bestCombo||0)>=10,21],
+  ['combo20','连击大师','单局连击达到 20',s=>(s.st.bestCombo||0)>=20,42],
+  ['m100','消了一百组','累计消除 100 组',s=>(s.st.matches||0)>=100,12],
+  ['m500','消了五百组','累计消除 500 组',s=>(s.st.matches||0)>=500,24],
+  ['m2000','消除机器','累计消除 2000 组',s=>(s.st.matches||0)>=2000,54],
+  ['boss1','初见 Boss','通关 1 个 Boss 关',s=>Object.keys(s.stars||{}).filter(k=>isBoss(+k)).length>=1,24],
+  /* 按「通关过几个不同的 Boss 关」算，而不是累计次数 —— 否则重打同一关三次就拿到了 */
+  ['boss3','Boss 克星','通关 3 个 Boss 关',s=>Object.keys(s.stars||{}).filter(k=>isBoss(+k)).length>=3,48],
+  ['notool','徒手过关','不用任何道具通关 1 次',s=>(s.st.noTool||0)>=1,15],
+  ['notool10','老手风范','不用道具通关 10 次',s=>(s.st.noTool||0)>=10,36],
+  ['daily1','今日打卡','完成 1 次每日挑战',s=>(s.st.daily||0)>=1,15],
+  ['daily7','坚持一周','完成 7 次每日挑战',s=>(s.st.daily||0)>=7,42],
+  ['endless20','无尽入门','无尽模式消 20 组',s=>(s.endless||0)>=20,15],
+  ['endless60','无尽好手','无尽模式消 60 组',s=>(s.endless||0)>=60,36],
+  ['dex5','小小收藏家','收集 5 只羊',s=>Object.keys(s.dex||{}).length>=5,18],
+  ['dex12','半个图鉴','收集 12 只羊',s=>Object.keys(s.dex||{}).length>=12,36],
+  ['dex24','图鉴全满','收集全部 24 只羊',s=>Object.keys(s.dex||{}).length>=24,90],
+  ['sr','传说降临','收集到 1 只传说羊',s=>Object.keys(s.dex||{}).some(id=>SHEEP_BY[id]&&SHEEP_BY[id].r===3),48],
+  ['farm5','初具规模','牧场建设累计 5 级',s=>Object.values(s.farm||{}).reduce((a,b)=>a+b,0)>=5,24],
+  ['farm20','牧场主','牧场全部建满',s=>Object.values(s.farm||{}).reduce((a,b)=>a+b,0)>=32,72]
 ];
 /* 称号：由成就解锁，可在「我的」页切换 */
 const TITLES=[
@@ -4862,8 +4966,8 @@ const TASKS=[
   {id:'match', stat:'matches', goals:[20,30,45], txt:g=>'累计消除 '+g+' 组',      coin:70,  wool:14},
   {id:'clear', stat:'clears',  goals:[1,2,3],    txt:g=>'通关 '+g+' 关',           coin:90,  wool:18},
   {id:'combo', stat:'combo',   goals:[4,5,6],    txt:g=>'单局达成 '+g+' 连击',     coin:80,  wool:16, max:true},
-  {id:'play',  stat:'plays',   goals:[3,5,7],    txt:g=>'开局 '+g+' 次',           coin:55,  wool:11},
-  {id:'spec',  stat:'spec',    goals:[6,10,15],  txt:g=>'消掉 '+g+' 张特殊牌',     coin:85,  wool:17},
+  {id:'play',  stat:'runs',    goals:[1,2,3],    txt:g=>'完成 '+g+' 局',           coin:55,  wool:11},
+  {id:'spec',  stat:'spec',    goals:[10,18,30],   txt:g=>'消掉 '+g+' 张奖励牌',     coin:85,  wool:17},
   {id:'daily', stat:'dailyRun',goals:[1],        txt:()=>'完成一次每日挑战',        coin:110, wool:22}
 ];
 const TASK_BY={}; TASKS.forEach(t=>TASK_BY[t.id]=t);
@@ -4893,10 +4997,9 @@ function claimTask(it){
   if(it.claimed||!taskDone(it)) return false;
   const d=TASK_BY[it.id];
   it.claimed=true;
-  save.coins+=Math.round(d.coin*coinMul());
-  save.wool+=Math.round(d.wool*woolMul());
+  const gc=gainCoin(d.coin), gw=gainWool(d.wool);
   persist(); SFX.coin(); updateChips();
-  toast('任务完成！金币 +'+Math.round(d.coin*coinMul())+' · 羊毛 +'+Math.round(d.wool*woolMul()));
+  toast('任务完成！金币 +'+gc+' · 羊毛 +'+gw);
   return true;
 }
 function renderTasks(){
@@ -4935,7 +5038,11 @@ const BUFFS=[
   {id:'combo', ico:'fa-fire',          n:'连击更宽松', d:'连击窗口延长 1.5 秒，更容易连起来'}
 ];
 function offerBuff(){
-  const r=shuffle(BUFFS.slice()).slice(0,3);
+  /* 「补给两件」原来不限次数，是全游戏最大的道具水龙头：其它三项第 7 波前
+     就顶满，之后每波期望白拿 1.2 件，第 200 波累计 428 件。金币封了顶，
+     道具没封，无尽照样是全局最优路线 */
+  const pool=BUFFS.filter(b=>b.id!=='tool' || ((G.buffs&&G.buffs.toolN)||0)<3);
+  const r=shuffle(pool).slice(0,3);
   $('#buff-title').textContent='第 '+G.wave+' 波来了';
   const g=$('#buff-grid'); g.innerHTML='';
   r.forEach(b=>{
@@ -4952,11 +5059,15 @@ function offerBuff(){
 }
 function applyBuff(id){
   G.buffs=G.buffs||{slots:0,types:0,tiles:0,combo:0};
-  if(id==='slot')  G.buffs.slots++;
-  if(id==='color') G.buffs.types++;
-  if(id==='small') G.buffs.tiles+=12;
+  /* 卡槽增益原来没有上限，十波之后能到 17 格 —— 唯一无上限的量涨的却是难度豁免，
+     结果是越玩越简单、越玩越不值钱 */
+  if(id==='slot')  G.buffs.slots=Math.min(4,G.buffs.slots+1);
+  /* 花色与盘面缩减都有底线（types 触底 4、n 触底 18），不限次数的话后面
+     几波是在白选：难度已经恒定，收益却还在涨 */
+  if(id==='color') G.buffs.types=Math.min(2,G.buffs.types+1);
+  if(id==='small') G.buffs.tiles=Math.min(36,G.buffs.tiles+12);
   if(id==='combo') G.buffs.combo+=1500;
-  if(id==='tool'){ for(let i=0;i<2;i++) save.tools[TOOL_KEYS[rnd(3)]]++; persist(); renderTools(); }
+  if(id==='tool'){ G.buffs.toolN=(G.buffs.toolN||0)+1; for(let i=0;i<2;i++) save.tools[TOOL_KEYS[rnd(3)]]++; persist(); renderTools(); }
   SFX.coin();
 }
 
@@ -4982,6 +5093,11 @@ function rollDrop(lv){
     pick=(fp.length&&Math.random()<0.7)?rnd(fp):rnd(pool);
   }
   if(!pick) return null;
+  /* 图鉴全满之后所有掉落都是重复，而且在稀有度档内均匀随机 —— 命中你正装备
+     那一只的概率只有 2%，把极光羊喂到满级要 588 局（约 11 小时），而
+     coinMul 上限 1.35 里有 0.20 就锁在这只羊身上。满图鉴之后碎片定向给
+     出战的那只，重复掉落才重新有意义（4 片 ≈ 12 局）。 */
+  if(!fresh.length && save.dex[save.skin] && SHEEP_BY[save.skin]) pick=SHEEP_BY[save.skin];
   if(save.dex[pick.id]){ save.dex[pick.id].s++; save.pity=(save.pity||0)+1; return {sheep:pick,dup:true}; }
   save.dex[pick.id]={s:0}; save.pity=0;
   return {sheep:pick,dup:false};
