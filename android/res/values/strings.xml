@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-  <string name="app_name">羊羊羊之草原牧歌</string>
+  <!-- 只有这一处是安卓独有且不吃游戏内 i18n 的：桌面图标下面那个标签。
+       游戏内的标题走 EN_DICT，英文用户本来就看到 Sheep Meadow，这里保持一致。
+       网页版与小游戏共用同一份 index.html，不受影响；软著仍以中文名登记。 -->
+  <string name="app_name">Sheep Meadow</string>
 </resources>
