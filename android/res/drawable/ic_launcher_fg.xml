@@ -1,25 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 自适应图标的前景层：羊。
-     遮罩只保证中心 72×72（即 18..90）不被裁，所以主体必须落在那个范围内。
-     这只羊的包围盒是 x 23..85、y 30..76，在安全区内，但左右两团正好顶到
-     圆形遮罩的边，看着比系统图标挤。整体缩到 0.82 留出约 10 的余量。 -->
+<!-- 自适应图标前景层：直接取自游戏里那只草帽羊（#sheep symbol），
+     配色用 SHEEP 表里 hat 的那五个值，保证图标和游戏内形象一致。
+     原 SVG 用 circle/ellipse/rect 和 transform，这里全部换算成 path。 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
-    android:viewportWidth="108" android:viewportHeight="108">
-  <group android:scaleX="0.82" android:scaleY="0.82" android:pivotX="54" android:pivotY="54">
-  <path android:fillColor="#FFFFFF"
-        android:pathData="M36,52 m-13,0 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0z" />
-  <path android:fillColor="#FFFFFF"
-        android:pathData="M54,44 m-14,0 a14,14 0 1,0 28,0 a14,14 0 1,0 -28,0z" />
-  <path android:fillColor="#FFFFFF"
-        android:pathData="M72,52 m-13,0 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0z" />
-  <path android:fillColor="#FFFFFF"
-        android:pathData="M54,60 m-16,0 a16,16 0 1,0 32,0 a16,16 0 1,0 -32,0z" />
-  <path android:fillColor="#EAF3E4"
-        android:pathData="M54,66 m-9,0 a9,10 0 1,0 18,0 a9,10 0 1,0 -18,0z" />
-  <path android:fillColor="#2E6B3E"
-        android:pathData="M50,64 m-1.6,0 a1.6,1.6 0 1,0 3.2,0 a1.6,1.6 0 1,0 -3.2,0z" />
-  <path android:fillColor="#2E6B3E"
-        android:pathData="M58,64 m-1.6,0 a1.6,1.6 0 1,0 3.2,0 a1.6,1.6 0 1,0 -3.2,0z" />
+    android:viewportWidth="120" android:viewportHeight="120">
+
+  <group android:translateY="-5" android:scaleX="0.85" android:scaleY="0.85"
+         android:pivotX="60" android:pivotY="60">
+    <path android:pathData="M26,56 a16,16 0 1,0 32,0 a16,16 0 1,0 -32,0z"
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#2E6B3E"
+        android:strokeWidth="4"
+        android:strokeLineJoin="round" />
+    <path android:pathData="M42,48 a18,18 0 1,0 36,0 a18,18 0 1,0 -36,0z"
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#2E6B3E"
+        android:strokeWidth="4"
+        android:strokeLineJoin="round" />
+    <path android:pathData="M62,56 a16,16 0 1,0 32,0 a16,16 0 1,0 -32,0z"
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#2E6B3E"
+        android:strokeWidth="4"
+        android:strokeLineJoin="round" />
+    <path android:pathData="M48.2,64 h0.1 a3.2,3.2 0 0 1 3.2,3.2 v8.6 a3.2,3.2 0 0 1 -3.2,3.2 h-0.1 a3.2,3.2 0 0 1 -3.2,-3.2 v-8.6 a3.2,3.2 0 0 1 3.2,-3.2z"
+        android:fillColor="#2E6B3E" />
+    <path android:pathData="M72.2,64 h0.1 a3.2,3.2 0 0 1 3.2,3.2 v8.6 a3.2,3.2 0 0 1 -3.2,3.2 h-0.1 a3.2,3.2 0 0 1 -3.2,-3.2 v-8.6 a3.2,3.2 0 0 1 3.2,-3.2z"
+        android:fillColor="#2E6B3E" />
+    <path android:pathData="M43.5,86 a16.5,13.5 0 1,0 33,0 a16.5,13.5 0 1,0 -33,0z"
+        android:fillColor="#FBFDF7"
+        android:strokeColor="#2E6B3E"
+        android:strokeWidth="4"
+        android:strokeLineJoin="round" />
+    <group android:rotation="-24" android:pivotX="41.5" android:pivotY="82">
+    <path android:pathData="M36,82 a5.5,9.5 0 1,0 11,0 a5.5,9.5 0 1,0 -11,0z"
+        android:fillColor="#FBFDF7"
+        android:strokeColor="#2E6B3E"
+        android:strokeWidth="3.5"
+        android:strokeLineJoin="round" />
+    </group>
+    <group android:rotation="24" android:pivotX="78.5" android:pivotY="82">
+    <path android:pathData="M73,82 a5.5,9.5 0 1,0 11,0 a5.5,9.5 0 1,0 -11,0z"
+        android:fillColor="#FBFDF7"
+        android:strokeColor="#2E6B3E"
+        android:strokeWidth="3.5"
+        android:strokeLineJoin="round" />
+    </group>
+    <path android:pathData="M51,85 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0z"
+        android:fillColor="#2E6B3E" />
+    <path android:pathData="M64,85 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0z"
+        android:fillColor="#2E6B3E" />
+    <path android:pathData="M58,90 q2,2.4 4,0"
+        android:fillColor="#00000000"
+        android:strokeColor="#2E6B3E"
+        android:strokeWidth="2.4"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round" />
+    <path android:pathData="M41.2,91 a3.8,2.4 0 1,0 7.6,0 a3.8,2.4 0 1,0 -7.6,0z"
+        android:fillColor="#F6C445"
+        android:fillAlpha="0.65" />
+    <path android:pathData="M71.2,91 a3.8,2.4 0 1,0 7.6,0 a3.8,2.4 0 1,0 -7.6,0z"
+        android:fillColor="#F6C445"
+        android:fillAlpha="0.65" />
   </group>
 </vector>

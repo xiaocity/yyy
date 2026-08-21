@@ -1,33 +1,150 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 用矢量图当图标：省掉一整套 mipmap 位图，也不需要图像工具 -->
+<!-- API 26 以下用这张：没有自适应图标，背景与前景合成一层。 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
-    android:viewportWidth="108" android:viewportHeight="108">
+    android:viewportWidth="120" android:viewportHeight="120">
 
-  <!-- 底色：草原绿 -->
-  <path android:fillColor="#2E6B3E"
-        android:pathData="M0,0h108v108h-108z" />
-
-  <!-- 远山 -->
-  <path android:fillColor="#3C7C4C"
-        android:pathData="M0,78 C18,62 34,74 54,66 C74,58 90,72 108,62 L108,108 L0,108 Z" />
-
-  <!-- 羊身：三团白云状 -->
-  <path android:fillColor="#FFFFFF"
-        android:pathData="M36,52 m-13,0 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0z" />
-  <path android:fillColor="#FFFFFF"
-        android:pathData="M54,44 m-14,0 a14,14 0 1,0 28,0 a14,14 0 1,0 -28,0z" />
-  <path android:fillColor="#FFFFFF"
-        android:pathData="M72,52 m-13,0 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0z" />
-  <path android:fillColor="#FFFFFF"
-        android:pathData="M54,60 m-16,0 a16,16 0 1,0 32,0 a16,16 0 1,0 -32,0z" />
-
-  <!-- 羊脸 -->
-  <path android:fillColor="#EAF3E4"
-        android:pathData="M54,66 m-9,0 a9,10 0 1,0 18,0 a9,10 0 1,0 -18,0z" />
-  <!-- 眼睛 -->
-  <path android:fillColor="#2E6B3E"
-        android:pathData="M50,64 m-1.6,0 a1.6,1.6 0 1,0 3.2,0 a1.6,1.6 0 1,0 -3.2,0z" />
-  <path android:fillColor="#2E6B3E"
-        android:pathData="M58,64 m-1.6,0 a1.6,1.6 0 1,0 3.2,0 a1.6,1.6 0 1,0 -3.2,0z" />
+    <path android:pathData="M0,0h120v120h-120z"
+        android:fillColor="#F6FAF0" />
+    <path android:pathData="M105.00,60.00 A45,45 0 0 1 104.20,68.43"
+        android:fillColor="#00000000"
+        android:strokeColor="#D3E8C6"
+        android:strokeWidth="2.5"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round" />
+    <path android:pathData="M100.54,79.52 A45,45 0 0 1 96.17,86.78"
+        android:fillColor="#00000000"
+        android:strokeColor="#D3E8C6"
+        android:strokeWidth="2.5"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round" />
+    <path android:pathData="M88.06,95.18 A45,45 0 0 1 80.97,99.82"
+        android:fillColor="#00000000"
+        android:strokeColor="#D3E8C6"
+        android:strokeWidth="2.5"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round" />
+    <path android:pathData="M70.01,103.87 A45,45 0 0 1 61.62,104.97"
+        android:fillColor="#00000000"
+        android:strokeColor="#D3E8C6"
+        android:strokeWidth="2.5"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round" />
+    <path android:pathData="M49.99,103.87 A45,45 0 0 1 41.94,101.22"
+        android:fillColor="#00000000"
+        android:strokeColor="#D3E8C6"
+        android:strokeWidth="2.5"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round" />
+    <path android:pathData="M31.94,95.18 A45,45 0 0 1 25.85,89.30"
+        android:fillColor="#00000000"
+        android:strokeColor="#D3E8C6"
+        android:strokeWidth="2.5"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round" />
+    <path android:pathData="M19.46,79.52 A45,45 0 0 1 16.52,71.58"
+        android:fillColor="#00000000"
+        android:strokeColor="#D3E8C6"
+        android:strokeWidth="2.5"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round" />
+    <path android:pathData="M15.00,60.00 A45,45 0 0 1 15.80,51.57"
+        android:fillColor="#00000000"
+        android:strokeColor="#D3E8C6"
+        android:strokeWidth="2.5"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round" />
+    <path android:pathData="M19.46,40.48 A45,45 0 0 1 23.83,33.22"
+        android:fillColor="#00000000"
+        android:strokeColor="#D3E8C6"
+        android:strokeWidth="2.5"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round" />
+    <path android:pathData="M31.94,24.82 A45,45 0 0 1 39.03,20.18"
+        android:fillColor="#00000000"
+        android:strokeColor="#D3E8C6"
+        android:strokeWidth="2.5"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round" />
+    <path android:pathData="M49.99,16.13 A45,45 0 0 1 58.38,15.03"
+        android:fillColor="#00000000"
+        android:strokeColor="#D3E8C6"
+        android:strokeWidth="2.5"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round" />
+    <path android:pathData="M70.01,16.13 A45,45 0 0 1 78.06,18.78"
+        android:fillColor="#00000000"
+        android:strokeColor="#D3E8C6"
+        android:strokeWidth="2.5"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round" />
+    <path android:pathData="M88.06,24.82 A45,45 0 0 1 94.15,30.70"
+        android:fillColor="#00000000"
+        android:strokeColor="#D3E8C6"
+        android:strokeWidth="2.5"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round" />
+    <path android:pathData="M100.54,40.48 A45,45 0 0 1 103.48,48.42"
+        android:fillColor="#00000000"
+        android:strokeColor="#D3E8C6"
+        android:strokeWidth="2.5"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round" />
+  <group android:translateY="-5" android:scaleX="0.85" android:scaleY="0.85"
+         android:pivotX="60" android:pivotY="60">
+    <path android:pathData="M26,56 a16,16 0 1,0 32,0 a16,16 0 1,0 -32,0z"
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#2E6B3E"
+        android:strokeWidth="4"
+        android:strokeLineJoin="round" />
+    <path android:pathData="M42,48 a18,18 0 1,0 36,0 a18,18 0 1,0 -36,0z"
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#2E6B3E"
+        android:strokeWidth="4"
+        android:strokeLineJoin="round" />
+    <path android:pathData="M62,56 a16,16 0 1,0 32,0 a16,16 0 1,0 -32,0z"
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#2E6B3E"
+        android:strokeWidth="4"
+        android:strokeLineJoin="round" />
+    <path android:pathData="M48.2,64 h0.1 a3.2,3.2 0 0 1 3.2,3.2 v8.6 a3.2,3.2 0 0 1 -3.2,3.2 h-0.1 a3.2,3.2 0 0 1 -3.2,-3.2 v-8.6 a3.2,3.2 0 0 1 3.2,-3.2z"
+        android:fillColor="#2E6B3E" />
+    <path android:pathData="M72.2,64 h0.1 a3.2,3.2 0 0 1 3.2,3.2 v8.6 a3.2,3.2 0 0 1 -3.2,3.2 h-0.1 a3.2,3.2 0 0 1 -3.2,-3.2 v-8.6 a3.2,3.2 0 0 1 3.2,-3.2z"
+        android:fillColor="#2E6B3E" />
+    <path android:pathData="M43.5,86 a16.5,13.5 0 1,0 33,0 a16.5,13.5 0 1,0 -33,0z"
+        android:fillColor="#FBFDF7"
+        android:strokeColor="#2E6B3E"
+        android:strokeWidth="4"
+        android:strokeLineJoin="round" />
+    <group android:rotation="-24" android:pivotX="41.5" android:pivotY="82">
+    <path android:pathData="M36,82 a5.5,9.5 0 1,0 11,0 a5.5,9.5 0 1,0 -11,0z"
+        android:fillColor="#FBFDF7"
+        android:strokeColor="#2E6B3E"
+        android:strokeWidth="3.5"
+        android:strokeLineJoin="round" />
+    </group>
+    <group android:rotation="24" android:pivotX="78.5" android:pivotY="82">
+    <path android:pathData="M73,82 a5.5,9.5 0 1,0 11,0 a5.5,9.5 0 1,0 -11,0z"
+        android:fillColor="#FBFDF7"
+        android:strokeColor="#2E6B3E"
+        android:strokeWidth="3.5"
+        android:strokeLineJoin="round" />
+    </group>
+    <path android:pathData="M51,85 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0z"
+        android:fillColor="#2E6B3E" />
+    <path android:pathData="M64,85 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0z"
+        android:fillColor="#2E6B3E" />
+    <path android:pathData="M58,90 q2,2.4 4,0"
+        android:fillColor="#00000000"
+        android:strokeColor="#2E6B3E"
+        android:strokeWidth="2.4"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round" />
+    <path android:pathData="M41.2,91 a3.8,2.4 0 1,0 7.6,0 a3.8,2.4 0 1,0 -7.6,0z"
+        android:fillColor="#F6C445"
+        android:fillAlpha="0.65" />
+    <path android:pathData="M71.2,91 a3.8,2.4 0 1,0 7.6,0 a3.8,2.4 0 1,0 -7.6,0z"
+        android:fillColor="#F6C445"
+        android:fillAlpha="0.65" />
+  </group>
 </vector>
