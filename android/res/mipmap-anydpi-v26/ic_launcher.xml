@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 8 起用这个：系统按各家桌面的遮罩（圆形/方形/水滴）裁切，
+     并在拖动时给两层做视差。之前是单层 vector，不会被遮罩处理，
+     桌面上会显示成一个没裁切的方块，和周围应用不一致。 -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+  <background android:drawable="@drawable/ic_launcher_bg" />
+  <foreground android:drawable="@drawable/ic_launcher_fg" />
+</adaptive-icon>

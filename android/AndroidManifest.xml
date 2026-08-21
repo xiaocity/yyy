@@ -2,15 +2,15 @@
 <!-- 没有 INTERNET 权限：这个游戏完全离线，装完不联网也能玩 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.cityg.caoyuan"
-    android:versionCode="116"
-    android:versionName="1.0">
+    android:versionCode="117"
+    android:versionName="1.0.0">
 
   <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="36" />
 
   <application
       android:label="@string/app_name"
-      android:icon="@drawable/ic_launcher"
-      android:roundIcon="@drawable/ic_launcher"
+      android:icon="@mipmap/ic_launcher"
+      android:roundIcon="@mipmap/ic_launcher"
       android:theme="@android:style/Theme.Material.Light.NoActionBar"
       android:hardwareAccelerated="true"
       android:allowBackup="true">

@@ -31,10 +31,12 @@ if (-not (Test-Path $bundletool)) {
         "  改名成 bundletool-all.jar 放到该路径。"
 }
 
-# 输出名要和软件全称一致：曾经这里写的是「草原牧歌.apk」，而实际交付的包叫
-# 「羊羊羊之草原牧歌.apk」，跑一次脚本就会多出一个同内容不同名的包
-$aab = 'D:\games\yyy\羊羊羊之草原牧歌.aab'
-$apk = 'D:\games\yyy\羊羊羊之草原牧歌.apk'
+# 输出名跟安卓版的应用名走（res/values/strings.xml 里 app_name = Sheep Meadow）。
+# 改名时两处必须一起改：曾经这里写的是「草原牧歌.apk」而实际交付的叫
+#「羊羊羊之草原牧歌.apk」，跑一次脚本就会多出一个同内容不同名的包。
+# 软著仍以中文全称登记，那边的材料不跟着改。
+$aab = 'D:\games\yyy\SheepMeadow.aab'
+$apk = 'D:\games\yyy\SheepMeadow.apk'
 $ks  = "$root\build\release.keystore"
 
 # 签名口令不写在脚本里 —— 这个文件要进 git，而进了历史的口令就等于泄露。
