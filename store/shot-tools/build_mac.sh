@@ -13,6 +13,8 @@ BT="$SDK/build-tools/36.0.0"
 # 这台机器上系统 java 只是占位壳，装的是解压版 Temurin 17；换机器时设 JAVA_HOME 即可
 JH="${JAVA_HOME:-$HOME/Library/Android/jdk17/jdk-17.0.20.1+1/Contents/Home}"
 JAR="$SDK/platforms/android-36/android.jar"
+# 可覆盖，用于 A/B 试不同清单（例如试去掉大屏兼容声明）
+MANIFEST="${MANIFEST:-$ROOT/android/AndroidManifest.xml}"
 OUT="$HERE/apkbuild"
 
 for need in "$BT/aapt2" "$JH/bin/javac" "$JAR"; do
@@ -46,7 +48,7 @@ fi
 # 2) 资源
 "$BT/aapt2" compile --dir "$ROOT/android/res" -o "$OUT/res.zip"
 "$BT/aapt2" link -o "$OUT/base.apk" -I "$JAR" \
-  --manifest "$ROOT/android/AndroidManifest.xml" \
+  --manifest "$MANIFEST" \
   -A "$OUT/assets" \
   --min-sdk-version 21 --target-sdk-version 36 \
   "$OUT/res.zip"

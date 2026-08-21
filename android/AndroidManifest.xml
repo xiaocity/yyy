@@ -15,14 +15,23 @@
       android:hardwareAccelerated="true"
       android:allowBackup="true">
 
-    <!-- targetSdk 36 起，Android 16 会在 >=600dp 的屏幕上无视 screenOrientation 与
-         resizeableActivity，把竖屏锁定的应用照样摆成横屏。这个游戏的版式是按竖屏
-         设计的，横过来会散，所以先声明退出。
-         注意：这只是过渡手段，官方说明该开关到 API 37 就失效，真正的解法是做横屏
-         适配。上架前请在大屏设备/模拟器上确认它确实生效。 -->
-    <property
-        android:name="android.window.PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY"
-        android:value="true" />
+    <!-- 大屏不再声明退出 resizability。
+         这条开关（PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY）原本用来挡住
+         Android 16 在 >=600dp 屏幕上无视 screenOrientation 的行为，理由写的是
+         「版式按竖屏设计，横过来会散」。那个判断在把平板版式改成 560dp 居中栏
+         （见 71da743）之前成立，之后就不成立了。
+
+         在 1600x2560 @320dpi（= 800x1280 dp）的平板模拟器上，两种清单各装一遍实测：
+           留着开关 —— 横屏下应用不旋转，被塞进竖屏兼容窗口，两侧大片黑边，系统
+                        还弹出「See and do more / 双击应用外部可重新摆放」这个
+                        「此应用未适配大屏」的提示框。
+           去掉开关 —— 横屏铺满，560dp 栏居中，首页与对局页版式都完整，
+                        无黑边也无提示框。对局页最吃高度，已一并确认。
+         网页版同样在 1280x800 / 1024x768 / 960x600 / 800x600 下都不溢出 ——
+         页面本来就有 @media (max-height:700px) 的矮屏适配兜底。
+
+         activity 上的 screenOrientation="portrait" 保留：手机（<600dp）仍锁竖屏，
+         大屏上 Android 16 本来就会忽略它。 -->
 
     <activity
         android:name=".MainActivity"
