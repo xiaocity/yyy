@@ -65,8 +65,8 @@ powershell -ExecutionPolicy Bypass -File android\build.ps1
 
 | 文件 | 用途 |
 |---|---|
-| `羊羊羊之草原牧歌.aab` | 传 Google Play。2021 年 8 月起新应用只收 App Bundle，传 APK 会被拒收 |
-| `羊羊羊之草原牧歌.apk` | 本地 `adb install` 自测。由 bundletool 从 AAB 生成的 universal 包 |
+| `SheepMeadow.aab` | 传 Google Play。2021 年 8 月起新应用只收 App Bundle，传 APK 会被拒收 |
+| `SheepMeadow.apk` | 本地 `adb install` 自测。由 bundletool 从 AAB 生成的 universal 包 |
 
 APK 是从 AAB 反过来生成的，不是另走一条流水线 —— 自测装的那个包和传上去的 bundle
 同源；而且这一步顺带把 bundle 完整走了一遍，结构有问题在本地就会炸，不用等传到
@@ -90,6 +90,28 @@ cd 软著; python gen.py; python gen_docx.py; node to_pdf.js; python pdf_check.p
 
 ## 签名密钥
 
-`android/build/release.keystore` **不在仓库里**，也不应该进仓库。它一旦泄露，别人就能签出被 Android 当作本应用正式更新的包，而且无法吊销——换密钥等于换应用，老用户装不了更新。
+`android/build/release.keystore` **不在仓库里**，也不应该进仓库。
 
-请自行离线备份该文件与口令。丢失后无法为已发布的应用再发更新。
+上架 Google Play 必须接受 Play 应用签名服务（传 AAB 就绕不开），接受之后密钥是两把，
+别把它们当成一回事：
+
+| | 谁持有 | 丢了会怎样 |
+|---|---|---|
+| 应用签名密钥 | Google | 你丢不了 |
+| 上传密钥 —— 就是本地这把 `release.keystore` | 你 | 可向 Google 申请重置 |
+
+所以本地这把是**上传密钥**，不是最终签在用户机器上的那把。丢了不等于这个应用就此
+再也发不了更新 —— 走支持工单重置即可，只是一来一回期间发不了版本。仍然请离线备份
+该文件与口令，只是不必再当成「丢了就完了」。
+
+泄露的后果也比自签名年代轻：光有上传密钥推不了更新，还得能登进你的 Play Console。
+但它依然是一份该保管好的凭据，一旦外泄就去 Console 重置。
+
+**首次「创建版本」时会让你指定应用签名密钥，选「让 Google 生成」。**
+若选「用我这把上传密钥同时当应用签名密钥」，上面那层可重置的保险就没有了。
+
+### 自测 APK 装不上 Play 版更新
+
+`build.ps1` 产出的自测 APK 用上传密钥签名，而用户从 Play 装到的包由 Google 用应用
+签名密钥重签 —— 内容同源，签名不同。所以本地 `adb install` 过自测包的机器，直接从
+Play 装更新会因签名不匹配而失败，先卸载再装即可。
