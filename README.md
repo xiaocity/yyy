@@ -46,19 +46,41 @@ minigame/               微信小游戏
 
 ### 安卓包
 
-依赖 JDK 17、`D:\android-sdk`（`platforms;android-36` + `build-tools;36.0.0`），
-以及 `D:\android-sdk\bundletool\bundletool-all.jar`（从 [bundletool releases](https://github.com/google/bundletool/releases) 下载后改成这个名字）。
+两个脚本等价，出一样的东西，**改了一个记得改另一个**：
 
-首次构建前先新建 `android/keystore.local.ps1`（该文件已在 `.gitignore` 中）：
+| 平台 | 脚本 | 口令文件 |
+|---|---|---|
+| Windows | `android/build.ps1` | `android/keystore.local.ps1` |
+| macOS / Linux | `android/build.sh` | `android/keystore.local.sh` |
+
+依赖 JDK 17、Android SDK（`platforms;android-36` + `build-tools;36.0.0`），
+以及 `bundletool-all.jar` 放在 SDK 的 `bundletool/` 子目录下
+（从 [bundletool releases](https://github.com/google/bundletool/releases) 下载后改成这个名字）。
+SDK 路径 Windows 上写死为 `D:\android-sdk`，mac 上默认 `~/Library/Android/sdk`，
+可用 `ANDROID_SDK_ROOT` 覆盖。
+
+签名口令不写在脚本里 —— 脚本要进 git，进了历史的口令就等于泄露。首次构建前先新建
+对应的口令文件（两个都已在 `.gitignore` 中）：
 
 ```powershell
 $env:CAOYUAN_KS_PASS = '你的签名口令'
 ```
 
+```bash
+export CAOYUAN_KS_PASS='你的签名口令'
+```
+
+口令至少 6 个字符（`keytool` 的硬限制），建议纯 ASCII —— 这把密钥要跨 Windows 与 mac 用，
+中文口令在跨平台工具链里容易踩编码问题。
+
 然后：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File android\build.ps1
+```
+
+```bash
+./android/build.sh
 ```
 
 产出两个文件：

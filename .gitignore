@@ -9,8 +9,9 @@
 *.p12
 *.pem
 
-# 本地签名口令，build.ps1 会自动读取
+# 本地签名口令，build.ps1 / build.sh 会自动读取
 android/keystore.local.ps1
+android/keystore.local.sh
 
 # ============ 个人签署件 ============
 # 签名/印章扫描件，公开后可被截取用于伪造其它文件的签署
