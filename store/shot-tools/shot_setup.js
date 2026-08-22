@@ -4,7 +4,8 @@
 
    两个占位符，由 build_mac.sh 的调用方 sed 替换：
      __LANG__    zh / tw / en
-     __SCREEN__  home / game / mine
+     __SCREEN__  section id 去掉 s- 前缀：home / levels / shop / mine / rank …
+                 特殊值 game 会先开一局再跳过去
      __LV__      关卡号（screen=game 时用；22 关往后十种特殊牌齐全且都有彩虹牌） */
 (function(){
   var LANG='__LANG__', SCREEN='__SCREEN__', LV=__LV__;
@@ -52,7 +53,8 @@
         go('s-game');
         setTimeout(fill, 500);
       } else {
-        go(SCREEN==='mine' ? 's-mine' : 's-home');
+        /* 其余页面直接跳过去。SCREEN 就是 section id 去掉 s- 前缀 */
+        go('s-' + SCREEN);
       }
     }catch(e){ console.log('SHOT boot 失败', e); }
   }
