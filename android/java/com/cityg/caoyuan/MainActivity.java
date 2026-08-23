@@ -1,6 +1,8 @@
 package com.cityg.caoyuan;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -16,10 +18,13 @@ import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
+import android.webkit.JsPromptResult;
+import android.webkit.WebChromeClient;
 import android.webkit.ValueCallback;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
@@ -79,6 +84,36 @@ public class MainActivity extends Activity {
                   + "    try{ AndroidClip.set(String(t)); return Promise.resolve(); }"
                   + "    catch(e){ return Promise.reject(e); } }};"
                   + "}})()", null);
+            }
+        });
+        /* WebView 默认不实现 JS 的 prompt / alert / confirm —— 不设 WebChromeClient 的话
+           window.prompt() 直接返回 null，页面那边什么都不会发生。
+           「我的 → 改名」（页面里唯一一处 prompt）在安卓上就表现为「点铅笔没反应」，
+           而在浏览器里一切正常，所以这个 bug 只有装成应用才看得见。
+           只补 prompt：游戏目前没有用到 alert / confirm，将来用了要在这里照样补上。 */
+        web.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onJsPrompt(WebView view, String url, String message,
+                                      String defaultValue, final JsPromptResult result) {
+                final EditText input = new EditText(MainActivity.this);
+                input.setText(defaultValue == null ? "" : defaultValue);
+                input.setSelectAllOnFocus(true);
+                new AlertDialog.Builder(MainActivity.this)
+                    .setMessage(message)
+                    .setView(input)
+                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                        @Override public void onClick(DialogInterface d, int which) {
+                            result.confirm(input.getText().toString());
+                        }
+                    })
+                    .setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+                        @Override public void onClick(DialogInterface d, int which) { result.cancel(); }
+                    })
+                    .setOnCancelListener(new DialogInterface.OnCancelListener() {
+                        @Override public void onCancel(DialogInterface d) { result.cancel(); }
+                    })
+                    .show();
+                return true;
             }
         });
         web.setBackgroundColor(CREAM);

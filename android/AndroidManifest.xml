@@ -2,7 +2,7 @@
 <!-- 没有 INTERNET 权限：这个游戏完全离线，装完不联网也能玩 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.cityg.caoyuan"
-    android:versionCode="118"
+    android:versionCode="119"
     android:versionName="1.0.0">
 
   <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="36" />
