@@ -42,6 +42,21 @@ minigame/               微信小游戏
 .claude/agents/         专职审查 agent（逻辑 / UI / 本地化）
 ```
 
+## WebView 兼容性
+
+安卓版是个 WebView 壳，界面能不能正常显示取决于**设备上 WebView 的版本**，而不是 Android
+版本本身 —— 同一台 Android 11，WebView 更新过和没更新过是两回事。
+
+已知下限：
+
+| 用到的特性 | 最低要求 | 不满足时 |
+|---|---|---|
+| `inset:` 简写 | Chrome 87 | 曾导致**整页空白**。已补 `top/right/bottom/left` longhand 兜底，现在不再是问题 |
+| flex `gap:` | Chrome 84 | 间距失效，文字会挤在一起（如「下午好，牧羊人」与日期贴住）。仍未处理 —— 全文 80 处，改成 margin 风险大于收益 |
+
+在 Chrome 83 的 WebView（Android 11 模拟器自带）上实测：布局完整、可正常游玩，只是
+上述间距会偏紧。更旧的 WebView 没测过。
+
 ## 构建
 
 ### 安卓包
