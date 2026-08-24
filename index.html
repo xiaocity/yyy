@@ -1694,10 +1694,29 @@ const DEF_SAVE={
   tasks:null, seenCh:[]
 };
 let save = load();
+/* 首次启动跟随设备语言。
+   商店默认列表是英文（应用名 Sheep Meadow），而 DEF_SAVE 里写死 lang:'zh' ——
+   外国用户从英文商店页装下来，打开却是满屏中文，两边对不上。
+   只在「没有任何存档」时生效：玩家一旦自己选过语言，永远以他的选择为准。 */
+function deviceLang(){
+  try{
+    const l=String((navigator.languages&&navigator.languages[0])||navigator.language||'').toLowerCase();
+    if(l.indexOf('zh')===0){
+      /* 繁体：zh-TW / zh-HK / zh-MO / zh-Hant-* 都归 tw，其余中文归简体 */
+      return /hant|tw|hk|mo/.test(l) ? 'tw' : 'zh';
+    }
+    return 'en';
+  }catch(e){ return 'en'; }
+}
+
 function load(){
   try{
     const raw=localStorage.getItem(SAVE_KEY);
-    if(!raw) return JSON.parse(JSON.stringify(DEF_SAVE));
+    if(!raw){
+      const d=JSON.parse(JSON.stringify(DEF_SAVE));
+      d.lang=deviceLang();
+      return d;
+    }
     const s=Object.assign(JSON.parse(JSON.stringify(DEF_SAVE)),JSON.parse(raw));
     s.tools=Object.assign({},DEF_SAVE.tools,s.tools);
     s.checkin=Object.assign({},DEF_SAVE.checkin,s.checkin);
